@@ -1,9 +1,7 @@
 [package]
-name = "minitel"
+name = "minitel-stum"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-
-[workspace]
-members = ["minitel-stum"]
+num_enum = "0.7.3"
