@@ -1,6 +1,10 @@
 pub mod stum;
 
-use std::fmt::{self, Debug, Display, Formatter};
+use std::{
+    collections::VecDeque,
+    fmt::{self, Debug, Display, Formatter},
+    io::BufRead,
+};
 
 use log::info;
 use smallvec::SmallVec;
@@ -429,14 +433,14 @@ pub trait SerialPlugMinitel: SerialMinitel {
 
 pub struct WebSocketMinitel<Stream: std::io::Read + std::io::Write> {
     ws: tungstenite::WebSocket<Stream>,
-    buffer: Vec<u8>, // todo: more appropriate buffer
+    buffer: VecDeque<u8>,
 }
 
 impl<Stream: std::io::Read + std::io::Write> WebSocketMinitel<Stream> {
     pub fn new(ws: tungstenite::WebSocket<Stream>) -> Self {
         Self {
             ws,
-            buffer: Vec::new(),
+            buffer: VecDeque::new(),
         }
     }
 }
@@ -464,8 +468,9 @@ impl<Stream: std::io::Read + std::io::Write> SerialMinitel for WebSocketMinitel<
                 _ => {}
             }
         }
-        data.copy_from_slice(&self.buffer[..data.len()]);
-        self.buffer.drain(..data.len());
+        for byte in data.iter_mut() {
+            *byte = self.buffer.pop_front().unwrap();
+        }
         Ok(())
     }
 

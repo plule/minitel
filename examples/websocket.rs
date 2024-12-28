@@ -20,7 +20,7 @@ use std::{
 };
 
 use log::*;
-use tungstenite::{accept, handshake::HandshakeRole, Error, HandshakeError, Message, Result};
+use tungstenite::{accept, handshake::HandshakeRole, Error, HandshakeError, Result};
 
 fn must_not_block<Role: HandshakeRole>(err: HandshakeError<Role>) -> Error {
     match err {
