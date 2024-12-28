@@ -35,12 +35,9 @@ impl<Stream: std::io::Read + std::io::Write> SerialMinitel for WebSocketMinitel<
                 .ws
                 .read()
                 .map_err(|e| MinitelError::IOError(e.to_string()))?;
-            match message {
-                tungstenite::Message::Text(data) => {
-                    info!("Received message: {:?}", data);
-                    self.buffer.extend(data.as_bytes());
-                }
-                _ => {}
+            if let tungstenite::Message::Text(data) = message {
+                info!("Received message: {:?}", data);
+                self.buffer.extend(data.as_bytes());
             }
         }
         for byte in data.iter_mut() {

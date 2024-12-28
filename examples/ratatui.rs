@@ -1,6 +1,6 @@
 use log::*;
 use minitel::prelude::*;
-use minitel_stum::videotex::{TouchesFonction, C0, C1};
+use minitel_stum::videotex::{TouchesFonction, C0};
 use ratatui::{
     prelude::*,
     widgets::{Block, Paragraph},

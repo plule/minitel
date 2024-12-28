@@ -172,8 +172,7 @@ impl<Minitel: minitel_stum::SerialMinitel> Backend for MinitelBackend<Minitel> {
             self.cursor_position.0 += 1;
 
             // Zone attributes: background color, invert, ...
-            let mut zone_attributes = Vec::new();
-            zone_attributes.push(match cell.bg {
+            let zone_attributes = vec![match cell.bg {
                 Color::Black => C1::BgBlack,
                 Color::Red => C1::BgRed,
                 Color::Green => C1::BgGreen,
@@ -191,7 +190,7 @@ impl<Minitel: minitel_stum::SerialMinitel> Backend for MinitelBackend<Minitel> {
                 Color::LightCyan => C1::BgCyan,
                 Color::White => C1::BgWhite,
                 _ => C1::BgBlack,
-            });
+            }];
 
             // Char attributes: foreground color, blink, ...
             let mut char_attributes = Vec::new();
@@ -249,7 +248,7 @@ impl<Minitel: minitel_stum::SerialMinitel> Backend for MinitelBackend<Minitel> {
                         for attr in &zone_attributes {
                             self.minitel.write_c1(*attr).unwrap();
                         }
-                        self.zone_attributes = zone_attributes.clone();
+                        self.zone_attributes.clone_from(&zone_attributes);
                     }
                     self.minitel.write_byte(0x20).unwrap();
                 }
@@ -259,7 +258,7 @@ impl<Minitel: minitel_stum::SerialMinitel> Backend for MinitelBackend<Minitel> {
                         for attr in &char_attributes {
                             self.minitel.write_c1(*attr).unwrap();
                         }
-                        self.char_attributes = char_attributes.clone();
+                        self.char_attributes.clone_from(&char_attributes);
                     }
                     self.minitel.write_char(c).unwrap();
                 }
@@ -269,16 +268,16 @@ impl<Minitel: minitel_stum::SerialMinitel> Backend for MinitelBackend<Minitel> {
                         for attr in &zone_attributes {
                             self.minitel.write_c1(*attr).unwrap();
                         }
-                        self.zone_attributes = zone_attributes.clone();
+                        self.zone_attributes.clone_from(&zone_attributes);
                     }
                     if self.char_attributes != char_attributes {
                         for attr in &char_attributes {
                             self.minitel.write_c1(*attr).unwrap();
                         }
-                        self.char_attributes = char_attributes.clone();
+                        self.char_attributes.clone_from(&char_attributes);
                     }
                     // Write the semi graphic char
-                    self.minitel.write_byte(c as u8).unwrap();
+                    self.minitel.write_byte(c).unwrap();
                 }
                 _ => {}
             }
@@ -287,11 +286,13 @@ impl<Minitel: minitel_stum::SerialMinitel> Backend for MinitelBackend<Minitel> {
     }
 
     fn hide_cursor(&mut self) -> std::io::Result<()> {
-        Ok(self.minitel.hide_cursor().unwrap())
+        self.minitel.hide_cursor().unwrap();
+        Ok(())
     }
 
     fn show_cursor(&mut self) -> std::io::Result<()> {
-        Ok(self.minitel.show_cursor().unwrap())
+        self.minitel.show_cursor().unwrap();
+        Ok(())
     }
 
     fn get_cursor_position(&mut self) -> std::io::Result<ratatui::prelude::Position> {
@@ -304,14 +305,15 @@ impl<Minitel: minitel_stum::SerialMinitel> Backend for MinitelBackend<Minitel> {
         position: P,
     ) -> std::io::Result<()> {
         let position: Position = position.into();
-        Ok(self
-            .minitel
+        self.minitel
             .set_pos(position.x as u8, position.y as u8)
-            .unwrap())
+            .unwrap();
+        Ok(())
     }
 
     fn clear(&mut self) -> std::io::Result<()> {
-        Ok(self.minitel.clear_screen().unwrap())
+        self.minitel.clear_screen().unwrap();
+        Ok(())
     }
 
     fn size(&self) -> std::io::Result<ratatui::prelude::Size> {
@@ -326,6 +328,7 @@ impl<Minitel: minitel_stum::SerialMinitel> Backend for MinitelBackend<Minitel> {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        Ok(self.minitel.flush().unwrap())
+        self.minitel.flush().unwrap();
+        Ok(())
     }
 }
