@@ -1,8 +1,8 @@
 use crate::stum::IntoSequence;
-use num_enum::IntoPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum C0 {
     NUL = 0x00,
     SOH = 0x01,
@@ -46,7 +46,7 @@ pub enum C0 {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, PartialEq, Eq, TryFromPrimitive)]
 pub enum C1 {
     /// 0%
     CharBlack = 0x40,
@@ -94,6 +94,7 @@ pub enum C1 {
     InvertBg = 0x5D,
     Unmask = 0x5F,
 
+    /// Enquiry cursor position
     EnqCursor = 0x61,
 }
 
@@ -105,7 +106,7 @@ impl IntoSequence<2> for C1 {
 
 /// p. 103
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum G2 {
     Pound = 0x23,
     Dollar = 0x24,
@@ -134,5 +135,28 @@ pub enum G2 {
 impl IntoSequence<2> for G2 {
     fn sequence(self) -> [u8; 2] {
         [C0::SS2.into(), self.into()]
+    }
+}
+
+/// Function keys, preceeded with C0::SEP
+///
+/// https://jbellue.github.io/stum1b/#2-3-6
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+pub enum TouchesFonction {
+    Envoi = 0x41,
+    Retour = 0x42,
+    Repetition = 0x43,
+    Guide = 0x44,
+    Annulation = 0x45,
+    Sommaire = 0x46,
+    Correction = 0x47,
+    Suite = 0x48,
+    ConnexionFin = 0x49,
+}
+
+impl IntoSequence<2> for TouchesFonction {
+    fn sequence(self) -> [u8; 2] {
+        [C0::Sep.into(), self.into()]
     }
 }

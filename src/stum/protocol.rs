@@ -1,3 +1,7 @@
+//! Exchange protocol between its components
+//!
+//! Reference: https://jbellue.github.io/stum1b/#2-6
+
 use core::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -6,6 +10,8 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::stum::videotex;
 
 /// Emission code of the Minitel modules
+///
+/// https://jbellue.github.io/stum1b/#2-6-1
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum RoutingTx {
@@ -16,6 +22,8 @@ pub enum RoutingTx {
 }
 
 /// Reception code of the Minitel modules
+///
+/// https://jbellue.github.io/stum1b/#2-6-1
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum RoutingRx {
@@ -25,23 +33,28 @@ pub enum RoutingRx {
     Prise = 0x5B,
 }
 
-/// There's no clear "protocol" table,
-/// stashing them here
+/// Escape sequence starting a protocol message
+///
+/// https://jbellue.github.io/stum1b/#2-6-2
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum Protocol {
+    /// Message with one parameter
     Pro1 = 0x39,
+    /// Message with two parameters
     Pro2 = 0x3A,
+    /// Message with three parameters
     Pro3 = 0x3B,
-    QueryPos = 0x61,
 }
 
 impl Protocol {
-    pub fn pro1_sequence(x: Pro1) -> [u8; 3] {
+    /// Sequence for a protocol message with one parameter
+    pub fn pro1(x: Pro1) -> [u8; 3] {
         [videotex::C0::ESC.into(), Self::Pro1.into(), x.into()]
     }
 
-    pub fn pro2_sequence(x: Pro2, y: impl Into<u8>) -> [u8; 4] {
+    /// Sequence for a protocol message with two parameters
+    pub fn pro2(x: Pro2, y: impl Into<u8>) -> [u8; 4] {
         [
             videotex::C0::ESC.into(),
             Self::Pro2.into(),
@@ -50,7 +63,8 @@ impl Protocol {
         ]
     }
 
-    pub fn pro3_sequence(x: Pro3, y: impl Into<u8>, z: impl Into<u8>) -> [u8; 5] {
+    /// Sequence for a protocol message with three parameters
+    pub fn pro3(x: Pro3, y: impl Into<u8>, z: impl Into<u8>) -> [u8; 5] {
         [
             videotex::C0::ESC.into(),
             Self::Pro3.into(),
@@ -60,8 +74,11 @@ impl Protocol {
         ]
     }
 
-    pub fn aguillage_sequence(enable: bool, from: RoutingTx, to: RoutingRx) -> [u8; 5] {
-        Self::pro3_sequence(
+    /// Sequence for a protocol message to enable or disable a routing
+    ///
+    /// https://jbellue.github.io/stum1b/#2-6-3
+    pub fn aiguillage(enable: bool, from: RoutingTx, to: RoutingRx) -> [u8; 5] {
+        Self::pro3(
             if enable {
                 Pro3::RoutingOn
             } else {
@@ -73,6 +90,7 @@ impl Protocol {
     }
 }
 
+/// Protocol messages with one parameter
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum Pro1 {
@@ -80,6 +98,7 @@ pub enum Pro1 {
     EnqRom = 0x7B,
 }
 
+/// Protocol messages with two parameters
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum Pro2 {
@@ -89,13 +108,7 @@ pub enum Pro2 {
     Prog = 0x6B,
 }
 
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
-pub enum Pro2Resp {
-    RepStatus = 0x73,
-    QuerySpeedAnswer = 0x75,
-}
-
+/// Protocol messages with three parameters
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum Pro3 {
@@ -103,12 +116,24 @@ pub enum Pro3 {
     RoutingOff = 0x60,
 }
 
+/// Protocol responses with two parameter
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, IntoPrimitive)]
+pub enum Pro2Resp {
+    RepStatus = 0x73,
+    QuerySpeedAnswer = 0x75,
+}
+
+/// Protocol responses with three parameter
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum Pro3Resp {
     RoutingFrom = 0x63,
 }
 
+/// Function mode for scrolling, error correcting, and lowercase
+///
+/// https://jbellue.github.io/stum1b/#2-6-11
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum FunctionMode {
@@ -118,20 +143,6 @@ pub enum FunctionMode {
     Procedure = 0x44,
     /// Minuscule (lowercase)
     Minuscule = 0x45,
-}
-
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
-pub enum TouchesX13 {
-    Envoi = 0x41,
-    Retour = 0x42,
-    Repetition = 0x43,
-    Guide = 0x44,
-    Annulation = 0x45,
-    Sommaire = 0x46,
-    Correction = 0x47,
-    Suite = 0x48,
-    ConnexionFin = 0x49,
 }
 
 #[derive(Debug, Clone, Copy)]
