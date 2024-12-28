@@ -1,7 +1,0 @@
-[package]
-name = "minitel-stum"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-num_enum = "0.7.3"

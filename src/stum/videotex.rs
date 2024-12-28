@@ -1,4 +1,4 @@
-use crate::IntoSequence;
+use crate::stum::IntoSequence;
 use num_enum::IntoPrimitive;
 
 #[repr(u8)]

@@ -3,6 +3,8 @@ use std::fmt::{Display, Formatter};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+use crate::stum::videotex;
+
 /// Emission code of the Minitel modules
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
@@ -36,12 +38,12 @@ pub enum Protocol {
 
 impl Protocol {
     pub fn pro1_sequence(x: Pro1) -> [u8; 3] {
-        [crate::videotex::C0::ESC.into(), Self::Pro1.into(), x.into()]
+        [videotex::C0::ESC.into(), Self::Pro1.into(), x.into()]
     }
 
     pub fn pro2_sequence(x: Pro2, y: impl Into<u8>) -> [u8; 4] {
         [
-            crate::videotex::C0::ESC.into(),
+            videotex::C0::ESC.into(),
             Self::Pro2.into(),
             x.into(),
             y.into(),
@@ -50,7 +52,7 @@ impl Protocol {
 
     pub fn pro3_sequence(x: Pro3, y: impl Into<u8>, z: impl Into<u8>) -> [u8; 5] {
         [
-            crate::videotex::C0::ESC.into(),
+            videotex::C0::ESC.into(),
             Self::Pro3.into(),
             x.into(),
             y.into(),
