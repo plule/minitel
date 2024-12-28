@@ -95,6 +95,7 @@ impl Protocol {
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum Pro1 {
     EnqSpeed = 0x74,
+    /// https://jbellue.github.io/stum1b/#2-6-6
     EnqRom = 0x7B,
 }
 
@@ -227,5 +228,24 @@ impl TryFrom<u8> for Baudrate {
 impl Display for Baudrate {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} bauds", self.hertz())
+    }
+}
+
+/// Content of the ROM retrived after PRO1 ENQROM
+/// Are omitted the SOH and EOT starting and ending bytes
+/// https://jbellue.github.io/stum1b/#2-6-6
+pub struct Rom {
+    pub manufacturer: u8,
+    pub model: u8,
+    pub version: u8,
+}
+
+impl From<[u8; 3]> for Rom {
+    fn from(rom: [u8; 3]) -> Self {
+        Rom {
+            manufacturer: rom[0],
+            model: rom[1],
+            version: rom[2],
+        }
     }
 }

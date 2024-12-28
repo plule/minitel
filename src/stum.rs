@@ -5,10 +5,3 @@
 
 pub mod protocol;
 pub mod videotex;
-
-/// Types that can be converted into a sequence of bytes in the
-/// minitel serial protocol
-pub trait IntoSequence<const N: usize> {
-    /// Sequence of bytes, including the escape sequence
-    fn sequence(self) -> [u8; N];
-}
