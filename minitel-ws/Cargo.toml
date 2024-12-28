@@ -1,0 +1,9 @@
+[package]
+name = "minitel-ws"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = "0.4.22"
+minitel-stum = { version = "0.1.0", path = "../minitel-stum" }
+tungstenite = "0.26.1"

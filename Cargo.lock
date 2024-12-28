@@ -259,11 +259,28 @@ version = "0.1.0"
 dependencies = [
  "env_logger",
  "log",
+ "minitel-ws",
+ "tungstenite",
+]
+
+[[package]]
+name = "minitel-stum"
+version = "0.1.0"
+dependencies = [
+ "log",
  "num_enum",
  "smallvec",
  "thiserror",
- "tungstenite",
  "unicode-normalization",
+]
+
+[[package]]
+name = "minitel-ws"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "minitel-stum",
+ "tungstenite",
 ]
 
 [[package]]

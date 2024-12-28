@@ -12,7 +12,7 @@
 //! see it echoed back.
 
 use log::info;
-use minitel::SerialMinitel;
+use minitel_ws::{SerialMinitel, WebSocketMinitel};
 
 use std::{
     net::{TcpListener, TcpStream},
@@ -32,7 +32,7 @@ fn must_not_block<Role: HandshakeRole>(err: HandshakeError<Role>) -> Error {
 fn handle_client(stream: TcpStream) -> Result<()> {
     info!("Running test");
     let socket = accept(stream).map_err(must_not_block)?;
-    let mut minitel = minitel::WebSocketMinitel::new(socket);
+    let mut minitel = WebSocketMinitel::new(socket);
     minitel.writeln("Bonjour, monde êîôûàèù").unwrap();
     loop {
         minitel.read_byte().unwrap();
