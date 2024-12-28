@@ -1,16 +1,3 @@
-//! A simple echo server.
-//!
-//! You can test this out by running:
-//!
-//!     cargo run --example echo-server 127.0.0.1:12345
-//!
-//! And then in another window run:
-//!
-//!     cargo run --example client ws://127.0.0.1:12345/
-//!
-//! Type a message into the client window, press enter to send it and
-//! see it echoed back.
-
 use log::*;
 use minitel::prelude::*;
 

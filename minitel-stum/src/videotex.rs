@@ -160,3 +160,45 @@ impl IntoSequence<2> for TouchesFonction {
         [C0::Sep.into(), self.into()]
     }
 }
+
+/// Convenience for black&white minitels
+///
+/// https://jbellue.github.io/stum1b/#1-3-2-4-3
+pub enum GrayScale {
+    Black,
+    Gray40,
+    Gray50,
+    Gray60,
+    Gray70,
+    Gray80,
+    Gray90,
+    White,
+}
+
+impl GrayScale {
+    pub fn char(&self) -> C1 {
+        match self {
+            GrayScale::Black => C1::CharBlack,
+            GrayScale::Gray40 => C1::CharBlue,
+            GrayScale::Gray50 => C1::CharRed,
+            GrayScale::Gray60 => C1::CharMagenta,
+            GrayScale::Gray70 => C1::CharGreen,
+            GrayScale::Gray80 => C1::CharCyan,
+            GrayScale::Gray90 => C1::CharYellow,
+            GrayScale::White => C1::CharWhite,
+        }
+    }
+
+    pub fn bg(&self) -> C1 {
+        match self {
+            GrayScale::Black => C1::BgBlack,
+            GrayScale::Gray40 => C1::BgBlue,
+            GrayScale::Gray50 => C1::BgRed,
+            GrayScale::Gray60 => C1::BgMagenta,
+            GrayScale::Gray70 => C1::BgGreen,
+            GrayScale::Gray80 => C1::BgCyan,
+            GrayScale::Gray90 => C1::BgYellow,
+            GrayScale::White => C1::BgWhite,
+        }
+    }
+}

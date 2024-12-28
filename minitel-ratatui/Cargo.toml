@@ -1,0 +1,8 @@
+[package]
+name = "minitel-ratatui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+minitel-stum = { version = "0.1.0", path = "../minitel-stum" }
+ratatui = { version = "0.29.0", default-features = false }
