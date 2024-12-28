@@ -7,10 +7,16 @@ edition = "2021"
 members = ["minitel-stum", "minitel-ws"]
 
 [dependencies]
+minitel-stum = { version = "0.1.0", path = "minitel-stum" }
+minitel-ws = { version = "0.1.0", path = "minitel-ws", optional = true }
 
+[features]
+default = []
+ws = ["dep:minitel-ws"]
 
 [dev-dependencies]
 env_logger = "0.11.6"
 log = "0.4.22"
 tungstenite = "0.26.1"
 minitel-ws = { version = "0.1.0", path = "minitel-ws" }
+minitel = { version = "0.1.0", path = ".", features = ["ws"] }

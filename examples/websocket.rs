@@ -11,23 +11,15 @@
 //! Type a message into the client window, press enter to send it and
 //! see it echoed back.
 
-use log::info;
-use minitel_ws::{SerialMinitel, WebSocketMinitel};
+use log::*;
+use minitel::prelude::*;
 
 use std::{
     net::{TcpListener, TcpStream},
     thread::spawn,
 };
 
-use log::*;
 use tungstenite::{accept, handshake::HandshakeRole, Error, HandshakeError, Result};
-
-fn must_not_block<Role: HandshakeRole>(err: HandshakeError<Role>) -> Error {
-    match err {
-        HandshakeError::Interrupted(_) => panic!("Bug: blocking socket would block"),
-        HandshakeError::Failure(f) => f,
-    }
-}
 
 fn handle_client(stream: TcpStream) -> Result<()> {
     info!("Running test");
@@ -57,5 +49,12 @@ fn main() {
             }
             Err(e) => error!("Error accepting stream: {}", e),
         });
+    }
+}
+
+fn must_not_block<Role: HandshakeRole>(err: HandshakeError<Role>) -> Error {
+    match err {
+        HandshakeError::Interrupted(_) => panic!("Bug: blocking socket would block"),
+        HandshakeError::Failure(f) => f,
     }
 }

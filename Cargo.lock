@@ -259,6 +259,8 @@ version = "0.1.0"
 dependencies = [
  "env_logger",
  "log",
+ "minitel",
+ "minitel-stum",
  "minitel-ws",
  "tungstenite",
 ]
