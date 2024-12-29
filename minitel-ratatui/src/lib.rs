@@ -4,7 +4,10 @@ use ratatui::backend::Backend;
 use ratatui::prelude::*;
 use symbols::line;
 
-use minitel_stum::videotex::{GrayScale, C0, C1};
+use minitel_stum::{
+    videotex::{GrayScale, C0, C1},
+    Minitel, SerialPort,
+};
 
 /// Keep track of the contextual data
 ///
@@ -141,8 +144,8 @@ impl From<&str> for CharKind {
     }
 }
 
-pub struct MinitelBackend<Minitel: minitel_stum::SerialMinitel> {
-    pub minitel: Minitel,
+pub struct MinitelBackend<S: SerialPort> {
+    pub minitel: Minitel<S>,
 
     cursor_position: (u16, u16),
     last_char_kind: CharKind,
@@ -150,8 +153,8 @@ pub struct MinitelBackend<Minitel: minitel_stum::SerialMinitel> {
     zone_attributes: Vec<C1>,
 }
 
-impl<Minitel: minitel_stum::SerialMinitel> MinitelBackend<Minitel> {
-    pub fn new(minitel: Minitel) -> Self {
+impl<S: SerialPort> MinitelBackend<S> {
+    pub fn new(minitel: Minitel<S>) -> Self {
         Self {
             minitel,
             cursor_position: (255, 255),
@@ -162,7 +165,7 @@ impl<Minitel: minitel_stum::SerialMinitel> MinitelBackend<Minitel> {
     }
 }
 
-impl<Minitel: minitel_stum::SerialMinitel> Backend for MinitelBackend<Minitel> {
+impl<S: SerialPort> Backend for MinitelBackend<S> {
     #[inline(always)]
     fn draw<'a, I>(&mut self, content: I) -> std::io::Result<()>
     where

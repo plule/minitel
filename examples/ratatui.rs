@@ -1,6 +1,5 @@
 use log::*;
-use minitel::prelude::*;
-use minitel_stum::videotex::{TouchesFonction, C0};
+use minitel::stum::videotex::{TouchesFonction, C0};
 use ratatui::{
     prelude::*,
     widgets::{Block, Paragraph},
@@ -23,7 +22,7 @@ pub struct App {
 
 impl App {
     /// runs the application's main loop until the user quits
-    pub fn run(&mut self, terminal: &mut WebSocketMinitelTerminal) -> io::Result<()> {
+    pub fn run(&mut self, terminal: &mut minitel::WSTerminal) -> io::Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events(&mut terminal.backend_mut().minitel)?;
@@ -37,7 +36,7 @@ impl App {
         frame.render_widget(self, frame.area());
     }
 
-    fn handle_events(&mut self, minitel: &mut WebSocketMinitel<TcpStream>) -> io::Result<()> {
+    fn handle_events(&mut self, minitel: &mut minitel::WSMinitel) -> io::Result<()> {
         if let Ok(C0::Sep) = C0::try_from(minitel.read_byte().unwrap()) {
             if let Ok(touche_fonction) = TouchesFonction::try_from(minitel.read_byte().unwrap()) {
                 match touche_fonction {
@@ -87,10 +86,11 @@ impl Widget for &App {
 fn handle_client(stream: TcpStream) -> Result<()> {
     info!("Running test");
     let socket = accept(stream).map_err(must_not_block)?;
-    let mut minitel = WebSocketMinitel::new(socket);
+    let mut minitel = minitel::ws::ws_minitel(socket);
     minitel.clear_screen().unwrap();
+    let mut terminal = minitel::ws_terminal(minitel).unwrap();
     let mut app = App::default();
-    app.run(&mut WebSocketMinitelTerminal::new(MinitelBackend::new(minitel)).unwrap())?;
+    app.run(&mut terminal)?;
     Ok(())
 }
 

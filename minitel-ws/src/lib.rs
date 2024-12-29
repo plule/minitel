@@ -1,18 +1,23 @@
-pub use minitel_stum::SerialMinitel;
+pub use minitel_stum::Minitel;
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, net::TcpStream};
 
-use log::info;
-use minitel_stum::MinitelError;
-use tungstenite::Utf8Bytes;
+use minitel_stum::SerialPort;
+use tungstenite::{Utf8Bytes, WebSocket};
 
-pub struct WebSocketMinitel<Stream: std::io::Read + std::io::Write> {
-    ws: tungstenite::WebSocket<Stream>,
+pub type WSMinitel = Minitel<WSPort<TcpStream>>;
+
+pub fn ws_minitel(socket: WebSocket<TcpStream>) -> WSMinitel {
+    WSMinitel::new(WSPort::new(socket))
+}
+
+pub struct WSPort<Stream: std::io::Read + std::io::Write> {
+    ws: WebSocket<Stream>,
     buffer: VecDeque<u8>,
 }
 
-impl<Stream: std::io::Read + std::io::Write> WebSocketMinitel<Stream> {
-    pub fn new(ws: tungstenite::WebSocket<Stream>) -> Self {
+impl<Stream: std::io::Read + std::io::Write> WSPort<Stream> {
+    pub fn new(ws: WebSocket<Stream>) -> Self {
         Self {
             ws,
             buffer: VecDeque::new(),
@@ -20,23 +25,27 @@ impl<Stream: std::io::Read + std::io::Write> WebSocketMinitel<Stream> {
     }
 }
 
-impl<Stream: std::io::Read + std::io::Write> SerialMinitel for WebSocketMinitel<Stream> {
-    fn send(&mut self, data: &[u8]) -> Result<(), MinitelError> {
-        self.ws
-            .send(tungstenite::Message::text(
-                Utf8Bytes::try_from(data.to_vec()).map_err(|_| MinitelError::FormattingError)?,
-            ))
-            .map_err(|e| MinitelError::IOError(e.to_string()))
+impl<Stream: std::io::Read + std::io::Write> From<WebSocket<Stream>> for WSPort<Stream> {
+    fn from(ws: WebSocket<Stream>) -> Self {
+        Self::new(ws)
+    }
+}
+
+impl<Stream: std::io::Read + std::io::Write> SerialPort for WSPort<Stream> {
+    type Error = tungstenite::Error;
+
+    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+        // the minitel websocket only accepts text messages? can be invalid utf8?
+        let text = Utf8Bytes::try_from(data.to_vec())?;
+        self.ws.send(tungstenite::Message::text(text))
     }
 
-    fn read(&mut self, data: &mut [u8]) -> Result<(), MinitelError> {
+    fn read(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
+        // The websocket provides data without control of the size
+        // store them in a buffer, and deliver as much as requested
         while self.buffer.len() < data.len() {
-            let message = self
-                .ws
-                .read()
-                .map_err(|e| MinitelError::IOError(e.to_string()))?;
+            let message = self.ws.read()?;
             if let tungstenite::Message::Text(data) = message {
-                info!("Received message: {:?}", data);
                 self.buffer.extend(data.as_bytes());
             }
         }
@@ -46,10 +55,8 @@ impl<Stream: std::io::Read + std::io::Write> SerialMinitel for WebSocketMinitel<
         Ok(())
     }
 
-    fn flush(&mut self) -> Result<(), MinitelError> {
-        self.ws
-            .flush()
-            .map_err(|e| MinitelError::IOError(e.to_string()))?;
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        self.ws.flush()?;
         self.buffer.clear();
         Ok(())
     }

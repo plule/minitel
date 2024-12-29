@@ -1,5 +1,4 @@
 use log::*;
-use minitel::prelude::*;
 
 use std::{
     net::{TcpListener, TcpStream},
@@ -11,7 +10,7 @@ use tungstenite::{accept, handshake::HandshakeRole, Error, HandshakeError, Resul
 fn handle_client(stream: TcpStream) -> Result<()> {
     info!("Running test");
     let socket = accept(stream).map_err(must_not_block)?;
-    let mut minitel = WebSocketMinitel::new(socket);
+    let mut minitel = minitel::ws_minitel(socket);
     minitel.writeln("Bonjour, monde êîôûàèù").unwrap();
     loop {
         minitel.read_byte().unwrap();

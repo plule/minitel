@@ -6,7 +6,7 @@
 pub mod protocol;
 pub mod videotex;
 
-use std::fmt::{self, Debug, Display, Formatter};
+use std::fmt::Debug;
 
 use crate::{
     protocol::{
@@ -36,114 +36,124 @@ where
 }
 
 #[derive(Debug, Error)]
-pub enum MinitelError {
-    IOError(String),
+pub enum MinitelError<IOError: Debug> {
+    IOError(#[from] IOError),
     ProtocolError,
     UnknownBaudrate,
-    FormattingError,
-    Unimplemented,
 }
 
-impl Display for MinitelError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            MinitelError::IOError(e) => write!(f, "IO error: {}", e),
-            MinitelError::ProtocolError => write!(f, "Protocol error"),
-            MinitelError::UnknownBaudrate => write!(f, "Unknown baudrate"),
-            MinitelError::FormattingError => write!(f, "Formatting error"),
-            MinitelError::Unimplemented => write!(f, "Unimplemented"),
-        }
-    }
-}
+pub trait SerialPort {
+    type Error: Debug;
 
-/// Ability to communicate with a minitel through a serial port
-pub trait SerialMinitel {
     /// Send a sequence of bytes to the minitel
-    fn send(&mut self, data: &[u8]) -> Result<(), MinitelError>;
+    fn send(&mut self, data: &[u8]) -> Result<(), Self::Error>;
     /// Read a sequence of bytes from the minitel, blocking
-    fn read(&mut self, data: &mut [u8]) -> Result<(), MinitelError>;
+    fn read(&mut self, data: &mut [u8]) -> Result<(), Self::Error>;
     /// Flush the serial port
-    fn flush(&mut self) -> Result<(), MinitelError>;
+    fn flush(&mut self) -> Result<(), Self::Error>;
+}
+
+pub trait SerialPortPlugged: SerialPort {
+    /// Change the baudrate of the serial port
+    fn set_baudrate(&mut self, baudrate: Baudrate) -> Result<(), Self::Error>;
+}
+
+pub struct Minitel<S: SerialPort> {
+    port: S,
+}
+
+impl<S: SerialPort> Minitel<S> {
+    pub fn new(port: S) -> Self {
+        Self { port }
+    }
 
     /// Write a raw sequence to the minitel
     #[inline(always)]
-    fn write_bytes(&mut self, data: &[u8]) -> Result<(), MinitelError> {
-        self.send(data)
+    pub fn write_bytes(&mut self, data: &[u8]) -> Result<(), S::Error> {
+        self.port.send(data)
     }
 
+    /// Write a single byte to the minitel
     #[inline(always)]
-    fn write_byte<T: Into<u8> + Copy>(&mut self, byte: T) -> Result<(), MinitelError> {
+    pub fn write_byte<T: Into<u8> + Copy>(&mut self, byte: T) -> Result<(), S::Error> {
         self.write_bytes(&[byte.into()])
     }
 
     /// Read a raw sequence from the minitel
     #[inline(always)]
-    fn read_bytes(&mut self, data: &mut [u8]) -> Result<(), MinitelError> {
-        self.read(data)
+    pub fn read_bytes(&mut self, data: &mut [u8]) -> Result<(), S::Error> {
+        self.port.read(data)
     }
 
+    /// Read a single byte from the minitel
     #[inline(always)]
-    fn read_byte(&mut self) -> Result<u8, MinitelError> {
+    pub fn read_byte(&mut self) -> Result<u8, S::Error> {
         let mut data = [0];
         self.read_bytes(&mut data)?;
         Ok(data[0])
     }
 
+    /// Flush the serial port
     #[inline(always)]
-    fn write_sequence<const N: usize>(
+    pub fn flush(&mut self) -> Result<(), S::Error> {
+        self.port.flush()
+    }
+
+    #[inline(always)]
+    pub fn write_sequence<const N: usize>(
         &mut self,
         sequence: impl IntoSequence<N>,
-    ) -> Result<(), MinitelError> {
+    ) -> Result<(), S::Error> {
         self.write_bytes(sequence.sequence().as_ref())
     }
 
     #[inline(always)]
-    fn write_c1(&mut self, c1: C1) -> Result<(), MinitelError> {
+    pub fn write_c1(&mut self, c1: C1) -> Result<(), S::Error> {
         self.write_sequence(c1)
     }
 
     #[inline(always)]
-    fn write_g2(&mut self, g2: G2) -> Result<(), MinitelError> {
+    pub fn write_g2(&mut self, g2: G2) -> Result<(), S::Error> {
         self.write_sequence(g2)
     }
 
     #[inline(always)]
-    fn show_cursor(&mut self) -> Result<(), MinitelError> {
+    pub fn show_cursor(&mut self) -> Result<(), S::Error> {
         self.write_byte(C0::Con)
     }
 
     #[inline(always)]
-    fn hide_cursor(&mut self) -> Result<(), MinitelError> {
+    pub fn hide_cursor(&mut self) -> Result<(), S::Error> {
         self.write_byte(C0::Coff)
     }
 
     #[inline(always)]
-    fn set_pos(&mut self, x: u8, y: u8) -> Result<(), MinitelError> {
+    pub fn set_pos(&mut self, x: u8, y: u8) -> Result<(), S::Error> {
         self.write_bytes(&[C0::US.into(), 0x40 + y, 0x40 + x + 1]) // allow access to y 0, not x 0// allow access to y 0, not x 0
     }
 
     #[inline(always)]
-    fn cursor_down(&mut self) -> Result<(), MinitelError> {
+    pub fn cursor_down(&mut self) -> Result<(), S::Error> {
         self.write_bytes(&[C0::LF.into()])
     }
 
     #[inline(always)]
-    fn cursor_up(&mut self) -> Result<(), MinitelError> {
+    pub fn cursor_up(&mut self) -> Result<(), S::Error> {
         self.write_byte(C0::VT)
     }
 
     #[inline(always)]
-    fn cursor_right(&mut self) -> Result<(), MinitelError> {
+    pub fn cursor_right(&mut self) -> Result<(), S::Error> {
         self.write_byte(C0::HT)
     }
 
     #[inline(always)]
-    fn cursor_left(&mut self) -> Result<(), MinitelError> {
+    pub fn cursor_left(&mut self) -> Result<(), S::Error> {
         self.write_byte(C0::BS)
     }
 
     #[inline(always)]
-    fn start_zone(&mut self, funcs: &[C1]) -> Result<(), MinitelError> {
+    pub fn start_zone(&mut self, funcs: &[C1]) -> Result<(), S::Error> {
         for func in funcs {
             self.write_c1(*func)?;
         }
@@ -152,11 +162,11 @@ pub trait SerialMinitel {
     }
 
     #[inline(always)]
-    fn zone_delimiter(&mut self) -> Result<(), MinitelError> {
+    pub fn zone_delimiter(&mut self) -> Result<(), S::Error> {
         self.write_byte(0x20)
     }
 
-    fn write_char(&mut self, c: char) -> Result<(), MinitelError> {
+    pub fn write_char(&mut self, c: char) -> Result<(), S::Error> {
         // ASCII, skip logic
         if c.is_ascii() {
             self.write_byte(c as u8)?;
@@ -252,7 +262,7 @@ pub trait SerialMinitel {
     }
 
     #[inline(always)]
-    fn write_str(&mut self, s: &str) -> Result<(), MinitelError> {
+    pub fn write_str(&mut self, s: &str) -> Result<(), S::Error> {
         for c in s.chars() {
             self.write_char(c)?;
         }
@@ -260,25 +270,28 @@ pub trait SerialMinitel {
     }
 
     #[inline(always)]
-    fn writeln(&mut self, s: &str) -> Result<(), MinitelError> {
+    pub fn writeln(&mut self, s: &str) -> Result<(), S::Error> {
         let mut s = s.to_string();
         s.push_str("\r\n");
         self.write_str(&s)
     }
 
     #[inline(always)]
-    fn clear_screen(&mut self) -> Result<(), MinitelError> {
+    pub fn clear_screen(&mut self) -> Result<(), S::Error> {
         self.write_byte(C0::FF)
     }
 
     #[inline(always)]
-    fn wait_for(&mut self, byte: impl Into<u8> + Copy) -> Result<(), MinitelError> {
+    pub fn wait_for(&mut self, byte: impl Into<u8> + Copy) -> Result<(), S::Error> {
         while self.read_byte()? != byte.into() {}
         Ok(())
     }
 
     #[inline(always)]
-    fn expect_read(&mut self, byte: impl Into<u8> + Copy) -> Result<(), MinitelError> {
+    pub fn expect_read(
+        &mut self,
+        byte: impl Into<u8> + Copy,
+    ) -> Result<(), MinitelError<S::Error>> {
         let got = self.read_byte()?;
         if got != byte.into() {
             return Err(MinitelError::ProtocolError);
@@ -287,7 +300,7 @@ pub trait SerialMinitel {
     }
 
     #[inline(always)]
-    fn read_rom(&mut self) -> Result<Rom, MinitelError> {
+    pub fn read_rom(&mut self) -> Result<Rom, MinitelError<S::Error>> {
         self.pro1(Pro1::EnqRom)?;
         self.wait_for(C0::SOH)?;
         let mut rom = [0; 3];
@@ -297,7 +310,7 @@ pub trait SerialMinitel {
     }
 
     #[inline(always)]
-    fn get_pos(&mut self) -> Result<(u8, u8), MinitelError> {
+    pub fn get_pos(&mut self) -> Result<(u8, u8), MinitelError<S::Error>> {
         self.write_c1(C1::EnqCursor)?;
         self.wait_for(C0::US)?;
         let mut position = [0; 2];
@@ -306,22 +319,26 @@ pub trait SerialMinitel {
     }
 
     #[inline(always)]
-    fn set_rouleau(&mut self, enable: bool) -> Result<(), MinitelError> {
+    pub fn set_rouleau(&mut self, enable: bool) -> Result<(), MinitelError<S::Error>> {
         self.set_function_mode(FunctionMode::Rouleau, enable)
     }
 
     #[inline(always)]
-    fn set_procedure(&mut self, enable: bool) -> Result<(), MinitelError> {
+    pub fn set_procedure(&mut self, enable: bool) -> Result<(), MinitelError<S::Error>> {
         self.set_function_mode(FunctionMode::Procedure, enable)
     }
 
     #[inline(always)]
-    fn set_minuscule(&mut self, enable: bool) -> Result<(), MinitelError> {
+    pub fn set_minuscule(&mut self, enable: bool) -> Result<(), MinitelError<S::Error>> {
         self.set_function_mode(FunctionMode::Minuscule, enable)
     }
 
     #[inline(always)]
-    fn set_function_mode(&mut self, mode: FunctionMode, enable: bool) -> Result<(), MinitelError> {
+    pub fn set_function_mode(
+        &mut self,
+        mode: FunctionMode,
+        enable: bool,
+    ) -> Result<(), MinitelError<S::Error>> {
         let start_stop = if enable { Pro2::Start } else { Pro2::Stop };
         self.pro2(start_stop, mode)?;
         let _status = self.read_pro2(Pro2Resp::RepStatus)?;
@@ -329,12 +346,12 @@ pub trait SerialMinitel {
     }
 
     #[inline(always)]
-    fn set_routing(
+    pub fn set_routing(
         &mut self,
         enable: bool,
         recepter: RoutingRx,
         emitter: RoutingTx,
-    ) -> Result<(), MinitelError> {
+    ) -> Result<(), MinitelError<S::Error>> {
         let cmd = if enable {
             Pro3::RoutingOn
         } else {
@@ -346,45 +363,51 @@ pub trait SerialMinitel {
     }
 
     #[inline(always)]
-    fn get_speed(&mut self) -> Result<Baudrate, MinitelError> {
+    pub fn get_speed(&mut self) -> Result<Baudrate, MinitelError<S::Error>> {
         self.pro1(Pro1::EnqSpeed)?;
         let code = self.read_pro2(Pro2Resp::QuerySpeedAnswer)?;
-        Baudrate::try_from(code).map_err(|_| MinitelError::UnknownBaudrate)
+        Baudrate::try_from(code).map_err(|_| MinitelError::<S::Error>::UnknownBaudrate)
     }
 
     /// Protocol command with a single argument
     #[inline(always)]
-    fn pro1(&mut self, x: Pro1) -> Result<(), MinitelError> {
-        self.write_bytes(&Protocol::pro1(x))
+    pub fn pro1(&mut self, x: Pro1) -> Result<(), MinitelError<S::Error>> {
+        self.write_bytes(&Protocol::pro1(x))?;
+        Ok(())
     }
 
     /// Protocol command with two arguments
     #[inline(always)]
-    fn pro2(&mut self, x: Pro2, y: impl Into<u8> + Copy) -> Result<(), MinitelError> {
-        self.write_bytes(&Protocol::pro2(x, y))
+    pub fn pro2(&mut self, x: Pro2, y: impl Into<u8> + Copy) -> Result<(), MinitelError<S::Error>> {
+        self.write_bytes(&Protocol::pro2(x, y))?;
+        Ok(())
     }
 
     /// Protocol command with three arguments
     #[inline(always)]
-    fn pro3(
+    pub fn pro3(
         &mut self,
         x: Pro3,
         y: impl Into<u8> + Copy,
         z: impl Into<u8> + Copy,
-    ) -> Result<(), MinitelError> {
-        self.write_bytes(&Protocol::pro3(x, y, z))
+    ) -> Result<(), MinitelError<S::Error>> {
+        self.write_bytes(&Protocol::pro3(x, y, z))?;
+        Ok(())
     }
 
     #[inline(always)]
-    fn read_pro2(&mut self, expected_ack: Pro2Resp) -> Result<u8, MinitelError> {
+    pub fn read_pro2(&mut self, expected_ack: Pro2Resp) -> Result<u8, MinitelError<S::Error>> {
         self.wait_for(C0::ESC)?;
         self.expect_read(Protocol::Pro2)?;
         self.expect_read(expected_ack)?;
-        self.read_byte()
+        Ok(self.read_byte()?)
     }
 
     #[inline(always)]
-    fn read_pro3(&mut self, expected_ack: Pro3Resp) -> Result<(u8, u8), MinitelError> {
+    pub fn read_pro3(
+        &mut self,
+        expected_ack: Pro3Resp,
+    ) -> Result<(u8, u8), MinitelError<S::Error>> {
         self.wait_for(C0::ESC)?;
         self.expect_read(Protocol::Pro3)?;
         self.expect_read(expected_ack)?;
@@ -393,15 +416,8 @@ pub trait SerialMinitel {
 }
 
 /// Ability to communicate with a minitel through a serial port with baudrate control
-pub trait SerialPlugMinitel: SerialMinitel {
-    /// Change the baudrate of the serial port
-    fn internal_set_baudrate(&mut self, baudrate: Baudrate) -> Result<(), MinitelError>;
-
-    fn change_baudrate(&mut self, baudrate: Baudrate) -> Result<(), MinitelError> {
-        self.internal_set_baudrate(baudrate)
-    }
-
-    fn search_speed(&mut self) -> Result<Baudrate, MinitelError> {
+impl<S: SerialPortPlugged> Minitel<S> {
+    pub fn search_speed(&mut self) -> Result<Baudrate, MinitelError<S::Error>> {
         for baudrate in [
             Baudrate::B1200,
             Baudrate::B300,
@@ -409,24 +425,31 @@ pub trait SerialPlugMinitel: SerialMinitel {
             Baudrate::B9600,
         ] {
             log::debug!("Trying baudrate: {}", baudrate);
-            self.internal_set_baudrate(baudrate)?;
-            self.flush()?;
+            self.port.set_baudrate(baudrate)?;
+            self.port.flush()?;
             if self.get_speed().is_ok() {
                 log::debug!("Found baudrate: {}", baudrate);
                 return Ok(baudrate);
             }
         }
-        Err(MinitelError::UnknownBaudrate)
+        Err(MinitelError::<S::Error>::UnknownBaudrate)
     }
 
     #[inline(always)]
-    fn set_speed(&mut self, baudrate: Baudrate) -> Result<Baudrate, MinitelError> {
+    pub fn set_speed(&mut self, baudrate: Baudrate) -> Result<Baudrate, MinitelError<S::Error>> {
         self.pro2(Pro2::Prog, baudrate.code())?;
-        self.flush()?;
-        self.internal_set_baudrate(baudrate)?;
+        self.port.flush()?;
+        self.port.set_baudrate(baudrate)?;
 
         let speed_code = self.read_pro2(Pro2Resp::QuerySpeedAnswer)?;
-        let baudrate = Baudrate::try_from(speed_code).map_err(|_| MinitelError::UnknownBaudrate)?;
+        let baudrate = Baudrate::try_from(speed_code)
+            .map_err(|_| MinitelError::<S::Error>::UnknownBaudrate)?;
         Ok(baudrate)
+    }
+}
+
+impl<S: SerialPort> From<S> for Minitel<S> {
+    fn from(port: S) -> Self {
+        Self::new(port)
     }
 }

@@ -12,14 +12,20 @@ pub mod ratatui {
     pub use minitel_ratatui::*;
 }
 
-pub mod prelude {
-    #[cfg(feature = "ratatui")]
-    pub use minitel_ratatui::MinitelBackend;
-    pub use minitel_stum::{SerialMinitel, SerialPlugMinitel};
-    #[cfg(feature = "ws")]
-    pub use minitel_ws::WebSocketMinitel;
+#[cfg(feature = "ratatui")]
+pub use minitel_ratatui::MinitelBackend;
 
-    #[cfg(all(feature = "ratatui", feature = "ws"))]
-    pub type WebSocketMinitelTerminal =
-        ratatui::Terminal<MinitelBackend<WebSocketMinitel<std::net::TcpStream>>>;
+#[cfg(feature = "ws")]
+pub use minitel_ws::WSMinitel;
+
+#[cfg(feature = "ws")]
+pub use minitel_ws::ws_minitel;
+
+#[cfg(all(feature = "ws", feature = "ratatui"))]
+pub type WSTerminal =
+    ::ratatui::Terminal<ratatui::MinitelBackend<minitel_ws::WSPort<std::net::TcpStream>>>;
+
+#[cfg(all(feature = "ws", feature = "ratatui"))]
+pub fn ws_terminal(minitel: minitel_ws::WSMinitel) -> std::io::Result<WSTerminal> {
+    WSTerminal::new(ratatui::MinitelBackend::new(minitel))
 }
