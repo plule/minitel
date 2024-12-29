@@ -4,7 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["minitel-ratatui", "minitel-stum", "minitel-ws"]
+members = [
+    "minitel-ratatui",
+    "minitel-stum",
+    "minitel-ws",
+    "minitel-esp-example",
+]
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true    # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
 
 [dependencies]
 minitel-stum = { version = "0.1.0", path = "minitel-stum" }
