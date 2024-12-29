@@ -1,4 +1,4 @@
-pub use minitel_stum::Minitel;
+use minitel_stum::Minitel;
 
 use std::{collections::VecDeque, io::Error, net::TcpStream};
 
@@ -7,27 +7,6 @@ use std::io::{ErrorKind, Result};
 use tungstenite::{Utf8Bytes, WebSocket};
 
 pub type WSMinitel = Minitel<WSPort<TcpStream>>;
-
-fn map_err(e: tungstenite::Error) -> std::io::Error {
-    match e {
-        tungstenite::Error::ConnectionClosed => ErrorKind::ConnectionReset.into(),
-        tungstenite::Error::AlreadyClosed => ErrorKind::NotConnected.into(),
-        tungstenite::Error::Io(error) => error,
-        tungstenite::Error::Tls(tls_error) => Error::new(ErrorKind::Other, tls_error),
-        tungstenite::Error::Capacity(capacity_error) => {
-            Error::new(ErrorKind::InvalidData, capacity_error)
-        }
-        tungstenite::Error::Protocol(protocol_error) => {
-            Error::new(ErrorKind::InvalidData, protocol_error)
-        }
-        tungstenite::Error::WriteBufferFull(_) => Error::new(ErrorKind::Other, "Write buffer full"),
-        tungstenite::Error::Utf8 => Error::new(ErrorKind::InvalidData, "Invalid UTF-8 data"),
-        tungstenite::Error::AttackAttempt => Error::new(ErrorKind::Other, "Attack attempt"),
-        tungstenite::Error::Url(url_error) => Error::new(ErrorKind::InvalidData, url_error),
-        tungstenite::Error::Http(_) => Error::new(ErrorKind::InvalidData, "HTTP error"),
-        tungstenite::Error::HttpFormat(error) => Error::new(ErrorKind::InvalidData, error),
-    }
-}
 
 pub fn ws_minitel(socket: WebSocket<TcpStream>) -> WSMinitel {
     WSMinitel::new(WSPort::new(socket))
@@ -82,5 +61,26 @@ impl<Stream: std::io::Read + std::io::Write> SerialPort for WSPort<Stream> {
         self.ws.flush().map_err(map_err)?;
         self.buffer.clear();
         Ok(())
+    }
+}
+
+fn map_err(e: tungstenite::Error) -> std::io::Error {
+    match e {
+        tungstenite::Error::ConnectionClosed => ErrorKind::ConnectionReset.into(),
+        tungstenite::Error::AlreadyClosed => ErrorKind::NotConnected.into(),
+        tungstenite::Error::Io(error) => error,
+        tungstenite::Error::Tls(tls_error) => Error::new(ErrorKind::Other, tls_error),
+        tungstenite::Error::Capacity(capacity_error) => {
+            Error::new(ErrorKind::InvalidData, capacity_error)
+        }
+        tungstenite::Error::Protocol(protocol_error) => {
+            Error::new(ErrorKind::InvalidData, protocol_error)
+        }
+        tungstenite::Error::WriteBufferFull(_) => Error::new(ErrorKind::Other, "Write buffer full"),
+        tungstenite::Error::Utf8 => Error::new(ErrorKind::InvalidData, "Invalid UTF-8 data"),
+        tungstenite::Error::AttackAttempt => Error::new(ErrorKind::Other, "Attack attempt"),
+        tungstenite::Error::Url(url_error) => Error::new(ErrorKind::InvalidData, url_error),
+        tungstenite::Error::Http(_) => Error::new(ErrorKind::InvalidData, "HTTP error"),
+        tungstenite::Error::HttpFormat(error) => Error::new(ErrorKind::InvalidData, error),
     }
 }

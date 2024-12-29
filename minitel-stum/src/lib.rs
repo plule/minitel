@@ -43,7 +43,7 @@ pub trait SerialPort {
     fn flush(&mut self) -> Result<()>;
 }
 
-pub trait SerialPortPlugged: SerialPort {
+pub trait BaudrateControl {
     /// Change the baudrate of the serial port
     fn set_baudrate(&mut self, baudrate: Baudrate) -> Result<()>;
 }
@@ -393,7 +393,7 @@ impl<S: SerialPort> Minitel<S> {
 }
 
 /// Ability to communicate with a minitel through a serial port with baudrate control
-impl<S: SerialPortPlugged> Minitel<S> {
+impl<S: SerialPort + BaudrateControl> Minitel<S> {
     pub fn search_speed(&mut self) -> Result<Baudrate> {
         for baudrate in [
             Baudrate::B1200,
