@@ -29,7 +29,7 @@ fn main() {
                 if let Err(err) = handle_client(stream) {
                     match err {
                         Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => (),
-                        e => error!("testéé: {}", e),
+                        e => error!("{}", e),
                     }
                 }
             }

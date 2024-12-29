@@ -238,10 +238,8 @@ impl<S: SerialPort> Backend for MinitelBackend<S> {
                 self.last_char_kind = char_kind;
 
                 // Move the cursor to the right position, select the char set
-                self.minitel.set_pos(x as u8, y as u8).unwrap();
-                self.minitel
-                    .write_byte(char_kind.escape_code() as u8)
-                    .unwrap();
+                self.minitel.set_pos(x as u8, y as u8)?;
+                self.minitel.write_byte(char_kind.escape_code() as u8)?;
             }
 
             match char_kind {
@@ -249,38 +247,38 @@ impl<S: SerialPort> Backend for MinitelBackend<S> {
                     // Empty char, update the zone attributes if necessary
                     if self.zone_attributes != zone_attributes {
                         for attr in &zone_attributes {
-                            self.minitel.write_c1(*attr).unwrap();
+                            self.minitel.write_c1(*attr)?;
                         }
                         self.zone_attributes.clone_from(&zone_attributes);
                     }
-                    self.minitel.write_byte(0x20).unwrap();
+                    self.minitel.write_byte(0x20)?;
                 }
                 CharKind::Alphabet(c) => {
                     // Alphabetic char, update the char attributes if necessary
                     if self.char_attributes != char_attributes {
                         for attr in &char_attributes {
-                            self.minitel.write_c1(*attr).unwrap();
+                            self.minitel.write_c1(*attr)?;
                         }
                         self.char_attributes.clone_from(&char_attributes);
                     }
-                    self.minitel.write_char(c).unwrap();
+                    self.minitel.write_char(c)?;
                 }
                 CharKind::SemiGraphic(c) => {
                     // Semigraphic char, update both the zone and char attributes if necessary
                     if self.zone_attributes != zone_attributes {
                         for attr in &zone_attributes {
-                            self.minitel.write_c1(*attr).unwrap();
+                            self.minitel.write_c1(*attr)?;
                         }
                         self.zone_attributes.clone_from(&zone_attributes);
                     }
                     if self.char_attributes != char_attributes {
                         for attr in &char_attributes {
-                            self.minitel.write_c1(*attr).unwrap();
+                            self.minitel.write_c1(*attr)?;
                         }
                         self.char_attributes.clone_from(&char_attributes);
                     }
                     // Write the semi graphic char
-                    self.minitel.write_byte(c).unwrap();
+                    self.minitel.write_byte(c)?;
                 }
                 _ => {}
             }
@@ -289,17 +287,17 @@ impl<S: SerialPort> Backend for MinitelBackend<S> {
     }
 
     fn hide_cursor(&mut self) -> std::io::Result<()> {
-        self.minitel.hide_cursor().unwrap();
+        self.minitel.hide_cursor()?;
         Ok(())
     }
 
     fn show_cursor(&mut self) -> std::io::Result<()> {
-        self.minitel.show_cursor().unwrap();
+        self.minitel.show_cursor()?;
         Ok(())
     }
 
     fn get_cursor_position(&mut self) -> std::io::Result<ratatui::prelude::Position> {
-        let (x, y) = self.minitel.get_pos().unwrap();
+        let (x, y) = self.minitel.get_pos()?;
         Ok(Position::new(x as u16, y as u16))
     }
 
@@ -308,14 +306,12 @@ impl<S: SerialPort> Backend for MinitelBackend<S> {
         position: P,
     ) -> std::io::Result<()> {
         let position: Position = position.into();
-        self.minitel
-            .set_pos(position.x as u8, position.y as u8)
-            .unwrap();
+        self.minitel.set_pos(position.x as u8, position.y as u8)?;
         Ok(())
     }
 
     fn clear(&mut self) -> std::io::Result<()> {
-        self.minitel.clear_screen().unwrap();
+        self.minitel.clear_screen()?;
         Ok(())
     }
 
@@ -331,7 +327,7 @@ impl<S: SerialPort> Backend for MinitelBackend<S> {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.minitel.flush().unwrap();
+        self.minitel.flush()?;
         Ok(())
     }
 }

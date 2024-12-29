@@ -27,7 +27,7 @@ impl App {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events(&mut terminal.backend_mut().minitel)?;
         }
-        terminal.backend_mut().minitel.clear_screen().unwrap();
+        terminal.backend_mut().minitel.clear_screen()?;
         Ok(())
     }
 
@@ -37,8 +37,8 @@ impl App {
     }
 
     fn handle_events(&mut self, minitel: &mut minitel::WSMinitel) -> io::Result<()> {
-        if let Ok(C0::Sep) = C0::try_from(minitel.read_byte().unwrap()) {
-            if let Ok(touche_fonction) = TouchesFonction::try_from(minitel.read_byte().unwrap()) {
+        if let Ok(C0::Sep) = C0::try_from(minitel.read_byte()?) {
+            if let Ok(touche_fonction) = TouchesFonction::try_from(minitel.read_byte()?) {
                 match touche_fonction {
                     TouchesFonction::Suite => self.counter = self.counter.saturating_add(1),
                     TouchesFonction::Retour => self.counter = self.counter.saturating_sub(1),
@@ -87,8 +87,8 @@ fn handle_client(stream: TcpStream) -> Result<()> {
     info!("Running test");
     let socket = accept(stream).map_err(must_not_block)?;
     let mut minitel = minitel::ws::ws_minitel(socket);
-    minitel.clear_screen().unwrap();
-    let mut terminal = minitel::ws_terminal(minitel).unwrap();
+    minitel.clear_screen()?;
+    let mut terminal = minitel::ws_terminal(minitel)?;
     let mut app = App::default();
     app.run(&mut terminal)?;
     Ok(())
@@ -105,7 +105,7 @@ fn main() {
                 if let Err(err) = handle_client(stream) {
                     match err {
                         Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => (),
-                        e => error!("testéé: {}", e),
+                        e => error!("{}", e),
                     }
                 }
             }

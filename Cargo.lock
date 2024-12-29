@@ -488,7 +488,6 @@ dependencies = [
  "log",
  "num_enum",
  "smallvec",
- "thiserror",
  "unicode-normalization",
 ]
 
