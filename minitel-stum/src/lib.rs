@@ -13,6 +13,7 @@ use crate::{
     },
     videotex::{C0, C1, G2},
 };
+
 use smallvec::SmallVec;
 use unicode_normalization::UnicodeNormalization;
 
@@ -270,8 +271,12 @@ impl<S: SerialPort> Minitel<S> {
 
     #[inline(always)]
     pub fn wait_for(&mut self, byte: impl Into<u8> + Copy) -> Result<()> {
-        while self.read_byte()? != byte.into() {}
-        Ok(())
+        for _ in 0..10 {
+            if self.read_byte()? == byte.into() {
+                return Ok(());
+            }
+        }
+        Err(ErrorKind::TimedOut.into())
     }
 
     #[inline(always)]
@@ -402,8 +407,9 @@ impl<S: SerialPort + BaudrateControl> Minitel<S> {
             Baudrate::B9600,
         ] {
             log::debug!("Trying baudrate: {}", baudrate);
-            self.port.set_baudrate(baudrate)?;
             self.port.flush()?;
+            self.port.set_baudrate(baudrate)?;
+            //self.port.flush()?;
             if self.get_speed().is_ok() {
                 log::debug!("Found baudrate: {}", baudrate);
                 return Ok(baudrate);

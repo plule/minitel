@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "minitel-esp"
+		},
+		{
+			"path": "minitel-esp-example"
+		}
+	],
+	"settings": {}
+}

@@ -1,3 +1,5 @@
+use minitel::stum::protocol::Baudrate;
+
 fn main() {
     // It is necessary to call this function once. Otherwise some patches to the runtime
     // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
@@ -15,6 +17,8 @@ fn main() {
 
     let mut minitel = minitel::esp_minitel_uart2().unwrap();
 
+    minitel.search_speed().unwrap();
+    minitel.set_speed(Baudrate::B9600).unwrap();
     minitel.clear_screen().unwrap();
     minitel.set_pos(10, 10).unwrap();
     minitel.write_str("Hello, world!").unwrap();

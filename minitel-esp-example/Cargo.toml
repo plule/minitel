@@ -10,6 +10,12 @@ rust-version = "1.77"
 name = "minitel-esp-example"
 harness = false # do not use the built in cargo test harness -> resolve rust-analyzer errors
 
+[profile.release]
+opt-level = "s"
+#
+[profile.dev]
+debug = true    # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
 
 [features]
 default = []

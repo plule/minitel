@@ -2,8 +2,8 @@ use std::io::{Error, ErrorKind, Result};
 
 use esp_idf_hal::{
     gpio::AnyIOPin,
-    io::{Read, Write},
-    sys::EspError,
+    io::Write,
+    sys::{EspError, TickType_t},
     uart,
     units::Hertz,
 };
@@ -12,8 +12,17 @@ use minitel_stum::{BaudrateControl, Minitel, SerialPort};
 pub type ESPMinitel<'a> = Minitel<ESPPort<'a>>;
 
 /// Create a new Minitel instance using the ESP32 UART.
-pub fn esp_minitel(uart: uart::UartDriver) -> ESPMinitel {
-    ESPMinitel::new(ESPPort::new(uart))
+pub fn esp_minitel(uart: uart::UartDriver, read_timeout: TickType_t) -> ESPMinitel {
+    ESPMinitel::new(ESPPort::new(uart, read_timeout))
+}
+
+/// Serial port configuration when the minitel starts
+pub fn default_uart_config() -> uart::UartConfig {
+    uart::UartConfig::default()
+        .baudrate(Hertz(1200))
+        .stop_bits(uart::config::StopBits::STOP1)
+        .data_bits(uart::config::DataBits::DataBits7)
+        .parity_even()
 }
 
 /// Create a new Minitel instance using the port 1 UART.
@@ -21,11 +30,6 @@ pub fn esp_minitel(uart: uart::UartDriver) -> ESPMinitel {
 pub fn esp_minitel_uart2() -> core::result::Result<ESPMinitel<'static>, EspError> {
     let peripherals = esp_idf_hal::peripherals::Peripherals::take()?;
     let pins = peripherals.pins;
-    let config = uart::UartConfig::default()
-        .baudrate(Hertz(1200))
-        .stop_bits(uart::config::StopBits::STOP1)
-        .data_bits(uart::config::DataBits::DataBits7)
-        .parity_even();
 
     let uart: uart::UartDriver = uart::UartDriver::new(
         peripherals.uart2,
@@ -33,19 +37,20 @@ pub fn esp_minitel_uart2() -> core::result::Result<ESPMinitel<'static>, EspError
         pins.gpio16,
         Option::<AnyIOPin>::None,
         Option::<AnyIOPin>::None,
-        &config,
+        &default_uart_config(),
     )?;
 
-    Ok(esp_minitel(uart))
+    Ok(esp_minitel(uart, 5))
 }
 
 pub struct ESPPort<'a> {
     pub uart: uart::UartDriver<'a>,
+    pub read_timeout: TickType_t,
 }
 
 impl<'a> ESPPort<'a> {
-    pub fn new(uart: uart::UartDriver<'a>) -> Self {
-        Self { uart }
+    pub fn new(uart: uart::UartDriver<'a>, read_timeout: TickType_t) -> Self {
+        Self { uart, read_timeout }
     }
 }
 
@@ -57,10 +62,10 @@ impl<'a> SerialPort for ESPPort<'a> {
     }
 
     fn read(&mut self, data: &mut [u8]) -> Result<()> {
-        self.uart.read_exact(data).map_err(|e| match e {
-            esp_idf_hal::io::ReadExactError::UnexpectedEof => ErrorKind::UnexpectedEof.into(),
-            esp_idf_hal::io::ReadExactError::Other(e) => Error::new(ErrorKind::Other, e),
-        })
+        self.uart
+            .read(data, self.read_timeout)
+            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        Ok(())
     }
 
     fn flush(&mut self) -> Result<()> {
