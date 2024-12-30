@@ -192,6 +192,49 @@ impl G2 {
             _ => None,
         }
     }
+
+    pub fn try_from_diactric(c: char) -> Option<Self> {
+        match c {
+            '\u{0300}' => Some(G2::Grave),
+            '\u{0301}' => Some(G2::Acute),
+            '\u{0302}' => Some(G2::Circumflex),
+            '\u{0308}' => Some(G2::Diaeresis),
+            '\u{0327}' => Some(G2::Cedille),
+            _ => None,
+        }
+    }
+}
+
+impl TryFrom<char> for G2 {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            '£' => Ok(G2::Pound),
+            '$' => Ok(G2::Dollar),
+            '#' => Ok(G2::Hash),
+            '§' => Ok(G2::Section),
+            '←' => Ok(G2::LeftArrow),
+            '↑' => Ok(G2::UpArrow),
+            '→' => Ok(G2::RightArrow),
+            '↓' => Ok(G2::DownArrow),
+            '°' => Ok(G2::Degree),
+            '±' => Ok(G2::PlusMinus),
+            '÷' => Ok(G2::Division),
+            '¼' => Ok(G2::OneQuarter),
+            '½' => Ok(G2::OneHalf),
+            '¾' => Ok(G2::ThreeQuarters),
+            //'`' => Ok(G2::Grave),
+            //'´' => Ok(G2::Acute),
+            //'^' => Ok(G2::Circumflex),
+            //'¨' => Ok(G2::Diaeresis),
+            //'¸' => Ok(G2::Cedille),
+            'Œ' => Ok(G2::OeMaj),
+            'œ' => Ok(G2::OeMin),
+            'β' => Ok(G2::Beta),
+            _ => Err(()),
+        }
+    }
 }
 
 /// Function keys, preceeded with C0::SEP

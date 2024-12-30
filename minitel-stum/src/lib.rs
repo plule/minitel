@@ -208,88 +208,16 @@ impl<S: SerialPort> Minitel<S> {
             return Ok(());
         }
 
-        // Specific case
-        match c {
-            'œ' => {
-                self.write_g2(G2::OeMin)?;
-                return Ok(());
-            }
-            'Œ' => {
-                self.write_g2(G2::OeMaj)?;
-                return Ok(());
-            }
-            'β' => {
-                self.write_g2(G2::Beta)?;
-                return Ok(());
-            }
-            '£' => {
-                self.write_g2(G2::Pound)?;
-                return Ok(());
-            }
-            '←' => {
-                self.write_g2(G2::LeftArrow)?;
-                return Ok(());
-            }
-            '↑' => {
-                self.write_g2(G2::UpArrow)?;
-                return Ok(());
-            }
-            '→' => {
-                self.write_g2(G2::RightArrow)?;
-                return Ok(());
-            }
-            '↓' => {
-                self.write_g2(G2::DownArrow)?;
-                return Ok(());
-            }
-            '°' => {
-                self.write_g2(G2::Degree)?;
-                return Ok(());
-            }
-            '±' => {
-                self.write_g2(G2::PlusMinus)?;
-                return Ok(());
-            }
-            '÷' => {
-                self.write_g2(G2::Division)?;
-                return Ok(());
-            }
-            '¼' => {
-                self.write_g2(G2::OneQuarter)?;
-                return Ok(());
-            }
-            '½' => {
-                self.write_g2(G2::OneHalf)?;
-                return Ok(());
-            }
-            '¾' => {
-                self.write_g2(G2::ThreeQuarters)?;
-                return Ok(());
-            }
-            _ => {}
+        // Check if it's a single G2 char
+        if let Ok(g2) = G2::try_from(c) {
+            self.write_g2(g2)?;
+            return Ok(());
         }
 
         // Diacritics
         let parts: SmallVec<[char; 2]> = c.nfd().take(2).collect();
-        if let Some(c) = parts.get(1) {
-            match *c as u32 {
-                0x0300 => {
-                    self.write_g2(G2::Grave)?;
-                }
-                0x0301 => {
-                    self.write_g2(G2::Acute)?;
-                }
-                0x00EA => {
-                    self.write_g2(G2::Circumflex)?;
-                }
-                0x0308 => {
-                    self.write_g2(G2::Diaeresis)?;
-                }
-                0x0327 => {
-                    self.write_g2(G2::Cedille)?;
-                }
-                _ => {}
-            }
+        if let Some(diacritic) = parts.get(1).and_then(|c| G2::try_from_diactric(*c)) {
+            self.write_g2(diacritic)?;
         }
         self.write_byte(parts[0] as u8)?;
 
@@ -531,5 +459,14 @@ mod tests {
         let mut minitel = Minitel::from(std::io::Cursor::new(seq));
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('é'));
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('½'));
+    }
+
+    #[test]
+    pub fn write_str() {
+        let seq: Vec<u8> = Vec::new();
+        let mut minitel = Minitel::from(std::io::Cursor::new(seq));
+        minitel.write_str("Hé½").unwrap();
+        let written = minitel.port.into_inner();
+        assert_eq!(written, vec![0x48, 0x19, 0x42, 0x65, 0x19, 0x3D]); // H, SS2, ', e, SS2, ½
     }
 }
