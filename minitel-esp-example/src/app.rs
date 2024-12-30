@@ -1,7 +1,10 @@
 use std::io;
 
 use minitel::{
-    stum::protocol::{Baudrate, RoutingRx, RoutingTx},
+    stum::{
+        protocol::{Baudrate, RoutingRx, RoutingTx},
+        videotex::{Stroke, TouchesFonction},
+    },
     ESPMinitel, ESPTerminal,
 };
 use ratatui::{
@@ -19,13 +22,16 @@ pub struct App {
 impl App {
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut ESPTerminal) -> io::Result<()> {
+        log::info!("Running App");
         terminal.clear()?;
         terminal.backend_mut().minitel.set_speed(Baudrate::B9600)?;
         terminal
             .backend_mut()
             .minitel
             .set_routing(false, RoutingRx::Modem, RoutingTx::Keyboard)?;
+        log::info!("Running the event loop");
         let loop_result = self.event_loop(terminal);
+        log::info!("Event loop ended");
         if let Err(err) = loop_result {
             log::error!("Error in event loop: {:?}", err);
         }
@@ -50,17 +56,18 @@ impl App {
     }
 
     fn handle_events(&mut self, minitel: &mut ESPMinitel) -> io::Result<()> {
-        match minitel.read_byte()? {
-            b'#' => {
-                self.counter = self.counter.saturating_add(1);
+        if let Ok(b) = minitel.read_s0_stroke() {
+            log::info!("Received strocke {:?}", b);
+            match b {
+                Stroke::Fonction(TouchesFonction::Suite) => {
+                    self.counter = self.counter.wrapping_add(1)
+                }
+                Stroke::Fonction(TouchesFonction::Retour) => {
+                    self.counter = self.counter.wrapping_sub(1)
+                }
+                Stroke::Fonction(TouchesFonction::Sommaire) => self.exit = true,
+                _ => {}
             }
-            b'*' => {
-                self.counter = self.counter.saturating_sub(1);
-            }
-            b'0' => {
-                self.exit = true;
-            }
-            _ => {}
         }
         Ok(())
     }

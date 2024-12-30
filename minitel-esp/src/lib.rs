@@ -40,7 +40,7 @@ pub fn esp_minitel_uart2() -> core::result::Result<ESPMinitel<'static>, EspError
         &default_uart_config(),
     )?;
 
-    Ok(esp_minitel(uart, 5))
+    Ok(esp_minitel(uart, 50))
 }
 
 pub struct ESPPort<'a> {
@@ -62,9 +62,13 @@ impl<'a> SerialPort for ESPPort<'a> {
     }
 
     fn read(&mut self, data: &mut [u8]) -> Result<()> {
-        self.uart
+        let read = self
+            .uart
             .read(data, self.read_timeout)
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        if read != data.len() {
+            return Err(Error::new(ErrorKind::TimedOut, "Read timeout"));
+        }
         Ok(())
     }
 

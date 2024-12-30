@@ -1,8 +1,22 @@
 use crate::IntoSequence;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+/// Virtual keystroke sequence
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Stroke {
+    // A single character, ASCII or G2
+    Char(char),
+    // A single control character
+    C0(C0),
+    // ESC C1 control character
+    C1(C1),
+    Fonction(TouchesFonction),
+}
+
+/// Base control characters
+/// https://jbellue.github.io/stum1b/#2-2-1-2-4-2
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 pub enum C0 {
     NUL = 0x00,
     SOH = 0x01,
@@ -45,8 +59,10 @@ pub enum C0 {
     US = 0x1F,
 }
 
+/// ESC control character
+/// https://jbellue.github.io/stum1b/#2-2-1-2-4-2
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, PartialEq, Eq, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 pub enum C1 {
     /// 0%
     CharBlack = 0x40,
@@ -104,9 +120,9 @@ impl IntoSequence<2> for C1 {
     }
 }
 
-/// p. 103
+/// https://jbellue.github.io/stum1b/#2-2-1-2-8
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 pub enum G2 {
     Pound = 0x23,
     Dollar = 0x24,
@@ -138,11 +154,51 @@ impl IntoSequence<2> for G2 {
     }
 }
 
+impl G2 {
+    pub fn char(self) -> char {
+        match self {
+            G2::Pound => '£',
+            G2::Dollar => '$',
+            G2::Hash => '#',
+            G2::Section => '§',
+            G2::LeftArrow => '←',
+            G2::UpArrow => '↑',
+            G2::RightArrow => '→',
+            G2::DownArrow => '↓',
+            G2::Degree => '°',
+            G2::PlusMinus => '±',
+            G2::Division => '÷',
+            G2::OneQuarter => '¼',
+            G2::OneHalf => '½',
+            G2::ThreeQuarters => '¾',
+            G2::Grave => '`',
+            G2::Acute => '´',
+            G2::Circumflex => '^',
+            G2::Diaeresis => '¨',
+            G2::Cedille => '¸',
+            G2::OeMaj => 'Œ',
+            G2::OeMin => 'œ',
+            G2::Beta => 'β',
+        }
+    }
+
+    pub fn unicode_diacritic(self) -> Option<char> {
+        match self {
+            G2::Grave => Some('\u{0300}'),
+            G2::Acute => Some('\u{0301}'),
+            G2::Circumflex => Some('\u{0302}'),
+            G2::Diaeresis => Some('\u{0308}'),
+            G2::Cedille => Some('\u{0327}'),
+            _ => None,
+        }
+    }
+}
+
 /// Function keys, preceeded with C0::SEP
 ///
 /// https://jbellue.github.io/stum1b/#2-3-6
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 pub enum TouchesFonction {
     Envoi = 0x41,
     Retour = 0x42,

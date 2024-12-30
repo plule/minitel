@@ -16,8 +16,9 @@ use crate::{
 
 use smallvec::SmallVec;
 use unicode_normalization::UnicodeNormalization;
+use videotex::{Stroke, TouchesFonction};
 
-use std::io::{ErrorKind, Result};
+use std::io::{Error, ErrorKind, Result};
 
 /// Types that can be converted into a sequence of bytes in the
 /// minitel serial protocol
@@ -50,7 +51,7 @@ pub trait BaudrateControl {
 }
 
 pub struct Minitel<S: SerialPort> {
-    port: S,
+    pub port: S,
 }
 
 impl<S: SerialPort> Minitel<S> {
@@ -82,6 +83,52 @@ impl<S: SerialPort> Minitel<S> {
         let mut data = [0];
         self.read_bytes(&mut data)?;
         Ok(data[0])
+    }
+
+    /// Read a key stroke from the minitel assuming it is in S0 (text) mode.
+    ///
+    /// G2 sets is not considered, it's instead represented as unicode Char(c).
+    pub fn read_s0_stroke(&mut self) -> Result<Stroke> {
+        let b = self.read_byte()?;
+        if matches!(b, 0x20..=0x7F) {
+            // ASCII basic
+            return Ok(Stroke::Char(b as char));
+        }
+        let c0 = C0::try_from(b).map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        match c0 {
+            C0::ESC => {
+                // ESC code, C1 special char
+                let c1 = C1::try_from(self.read_byte()?)
+                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+                Ok(Stroke::C1(c1))
+            }
+            C0::Sep => {
+                // SEP code, function key
+                let fct = TouchesFonction::try_from(self.read_byte()?)
+                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+                Ok(Stroke::Fonction(fct))
+            }
+            C0::SS2 => {
+                // SS2 code, G2 char, returned as unicode char
+                let g2 = G2::try_from(self.read_byte()?)
+                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+                if let Some(diacritics) = g2.unicode_diacritic() {
+                    // With diacritics, read one more byte for the base char
+                    let char: char = self.read_byte()?.try_into().map_err(|_| {
+                        Error::new(ErrorKind::InvalidData, "Invalid diacritic character")
+                    })?;
+                    let char = unicode_normalization::char::compose(char, diacritics).ok_or(
+                        Error::new(ErrorKind::InvalidData, "Invalid diacritic composition"),
+                    )?;
+                    Ok(Stroke::Char(char))
+                } else {
+                    // Without diacritic, return the char directly
+                    Ok(Stroke::Char(g2.char()))
+                }
+            }
+            _ => Ok(Stroke::C0(c0)),
+        }
     }
 
     /// Flush the serial port
@@ -433,5 +480,56 @@ impl<S: SerialPort + BaudrateControl> Minitel<S> {
 impl<S: SerialPort> From<S> for Minitel<S> {
     fn from(port: S) -> Self {
         Self::new(port)
+    }
+}
+
+impl<T> SerialPort for T
+where
+    T: std::io::Read + std::io::Write,
+{
+    fn send(&mut self, data: &[u8]) -> Result<()> {
+        self.write_all(data)
+    }
+
+    fn read(&mut self, data: &mut [u8]) -> Result<()> {
+        self.read_exact(data)
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        self.flush()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    pub fn read_stroke() {
+        let seq: Vec<_> = "He?! ".bytes().collect();
+        let mut minitel = Minitel::from(std::io::Cursor::new(seq));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('H'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('e'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('?'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('!'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char(' '));
+
+        let seq: Vec<_> = vec![0x20, 0x13, 0x41, 0x13, 0x49, 0x20, 0x1B, 0x54];
+        let mut minitel = Minitel::from(std::io::Cursor::new(seq));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char(' '));
+        assert_eq!(
+            minitel.read_s0_stroke().unwrap(),
+            Stroke::Fonction(TouchesFonction::Envoi)
+        );
+        assert_eq!(
+            minitel.read_s0_stroke().unwrap(),
+            Stroke::Fonction(TouchesFonction::ConnexionFin)
+        );
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char(' '));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::C1(C1::BgBlue));
+
+        let seq: Vec<_> = vec![0x19, 0x42, 0x65, 0x19, 0x3D]; // SS2, ', e, SS2, ½
+        let mut minitel = Minitel::from(std::io::Cursor::new(seq));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('é'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('½'));
     }
 }
