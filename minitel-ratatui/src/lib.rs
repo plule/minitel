@@ -6,7 +6,7 @@ use symbols::line;
 
 use minitel_stum::{
     videotex::{GrayScale, C0, C1},
-    Minitel, SerialPort,
+    Minitel, MinitelRead, MinitelWrite,
 };
 
 /// Keep track of the contextual data
@@ -144,7 +144,7 @@ impl From<&str> for CharKind {
     }
 }
 
-pub struct MinitelBackend<S: SerialPort> {
+pub struct MinitelBackend<S: MinitelRead + MinitelWrite> {
     pub minitel: Minitel<S>,
 
     cursor_position: (u16, u16),
@@ -153,7 +153,7 @@ pub struct MinitelBackend<S: SerialPort> {
     zone_attributes: Vec<C1>,
 }
 
-impl<S: SerialPort> MinitelBackend<S> {
+impl<S: MinitelRead + MinitelWrite> MinitelBackend<S> {
     pub fn new(minitel: Minitel<S>) -> Self {
         Self {
             minitel,
@@ -165,7 +165,7 @@ impl<S: SerialPort> MinitelBackend<S> {
     }
 }
 
-impl<S: SerialPort> Backend for MinitelBackend<S> {
+impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
     #[inline(always)]
     fn draw<'a, I>(&mut self, content: I) -> std::io::Result<()>
     where

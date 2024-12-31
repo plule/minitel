@@ -7,7 +7,7 @@ use esp_idf_hal::{
     uart,
     units::Hertz,
 };
-use minitel_stum::{BaudrateControl, Minitel, SerialPort};
+use minitel_stum::{Minitel, MinitelBaudrateControl, MinitelRead, MinitelWrite};
 
 pub type ESPMinitel<'a> = Minitel<ESPPort<'a>>;
 
@@ -54,13 +54,21 @@ impl<'a> ESPPort<'a> {
     }
 }
 
-impl<'a> SerialPort for ESPPort<'a> {
+impl<'a> MinitelWrite for ESPPort<'a> {
     fn send(&mut self, data: &[u8]) -> Result<()> {
         self.uart
             .write_all(data)
             .map_err(|e| Error::new(ErrorKind::Other, e))
     }
 
+    fn flush(&mut self) -> Result<()> {
+        self.uart
+            .flush()
+            .map_err(|e| Error::new(ErrorKind::Other, e))
+    }
+}
+
+impl<'a> MinitelRead for ESPPort<'a> {
     fn read(&mut self, data: &mut [u8]) -> Result<()> {
         let read = self
             .uart
@@ -71,15 +79,9 @@ impl<'a> SerialPort for ESPPort<'a> {
         }
         Ok(())
     }
-
-    fn flush(&mut self) -> Result<()> {
-        self.uart
-            .flush()
-            .map_err(|e| Error::new(ErrorKind::Other, e))
-    }
 }
 
-impl<'a> BaudrateControl for ESPPort<'a> {
+impl<'a> MinitelBaudrateControl for ESPPort<'a> {
     fn set_baudrate(&mut self, baudrate: minitel_stum::protocol::Baudrate) -> Result<()> {
         self.uart
             .change_baudrate(baudrate.hertz())

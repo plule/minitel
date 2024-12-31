@@ -2,7 +2,7 @@ use minitel_stum::Minitel;
 
 use std::{collections::VecDeque, io::Error, net::TcpStream};
 
-use minitel_stum::SerialPort;
+use minitel_stum::{MinitelRead, MinitelWrite};
 use std::io::{ErrorKind, Result};
 use tungstenite::{Utf8Bytes, WebSocket};
 
@@ -32,16 +32,7 @@ impl<Stream: std::io::Read + std::io::Write> From<WebSocket<Stream>> for WSPort<
     }
 }
 
-impl<Stream: std::io::Read + std::io::Write> SerialPort for WSPort<Stream> {
-    fn send(&mut self, data: &[u8]) -> Result<()> {
-        // the minitel websocket only accepts text messages? can be invalid utf8?
-        let text = Utf8Bytes::try_from(data.to_vec())
-            .map_err(|_| std::io::Error::new(ErrorKind::InvalidData, "Invalid UTF-8 data"))?;
-        self.ws
-            .send(tungstenite::Message::text(text))
-            .map_err(map_err)
-    }
-
+impl<Stream: std::io::Read + std::io::Write> MinitelRead for WSPort<Stream> {
     fn read(&mut self, data: &mut [u8]) -> Result<()> {
         // The websocket provides data without control of the size
         // store them in a buffer, and deliver as much as requested
@@ -55,6 +46,17 @@ impl<Stream: std::io::Read + std::io::Write> SerialPort for WSPort<Stream> {
             *byte = self.buffer.pop_front().unwrap();
         }
         Ok(())
+    }
+}
+
+impl<Stream: std::io::Read + std::io::Write> MinitelWrite for WSPort<Stream> {
+    fn send(&mut self, data: &[u8]) -> Result<()> {
+        // the minitel websocket only accepts text messages? can be invalid utf8?
+        let text = Utf8Bytes::try_from(data.to_vec())
+            .map_err(|_| std::io::Error::new(ErrorKind::InvalidData, "Invalid UTF-8 data"))?;
+        self.ws
+            .send(tungstenite::Message::text(text))
+            .map_err(map_err)
     }
 
     fn flush(&mut self) -> Result<()> {

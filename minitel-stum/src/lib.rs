@@ -36,41 +36,107 @@ where
     }
 }
 
-pub trait SerialPort {
-    /// Send a sequence of bytes to the minitel
-    fn send(&mut self, data: &[u8]) -> Result<()>;
+pub trait MinitelRead {
     /// Read a sequence of bytes from the minitel, blocking
     fn read(&mut self, data: &mut [u8]) -> Result<()>;
+}
+
+pub trait MinitelWrite {
+    /// Send a sequence of bytes to the minitel
+    fn send(&mut self, data: &[u8]) -> Result<()>;
     /// Flush the serial port
     fn flush(&mut self) -> Result<()>;
 }
 
-pub trait BaudrateControl {
+pub trait MinitelBaudrateControl {
     /// Change the baudrate of the serial port
     fn set_baudrate(&mut self, baudrate: Baudrate) -> Result<()>;
 }
 
-pub struct Minitel<S: SerialPort> {
+pub struct Minitel<S> {
     pub port: S,
 }
 
-impl<S: SerialPort> Minitel<S> {
+impl<S> Minitel<S> {
     pub fn new(port: S) -> Self {
         Self { port }
     }
+}
 
-    /// Write a raw sequence to the minitel
+impl<S: MinitelRead + MinitelWrite> Minitel<S> {
     #[inline(always)]
-    pub fn write_bytes(&mut self, data: &[u8]) -> Result<()> {
-        self.port.send(data)
+    pub fn clear_screen(&mut self) -> Result<()> {
+        self.write_byte(C0::FF)
     }
 
-    /// Write a single byte to the minitel
     #[inline(always)]
-    pub fn write_byte<T: Into<u8> + Copy>(&mut self, byte: T) -> Result<()> {
-        self.write_bytes(&[byte.into()])
+    pub fn read_rom(&mut self) -> Result<Rom> {
+        self.pro1(Pro1::EnqRom)?;
+        self.wait_for(C0::SOH)?;
+        let mut rom = [0; 3];
+        self.read_bytes(&mut rom)?;
+        self.expect_read(C0::EOL)?;
+        Ok(rom.into())
     }
 
+    #[inline(always)]
+    pub fn get_pos(&mut self) -> Result<(u8, u8)> {
+        self.write_c1(C1::EnqCursor)?;
+        self.wait_for(C0::US)?;
+        let mut position = [0; 2];
+        self.read_bytes(&mut position)?;
+        Ok((position[1] - 0x40 - 1, position[0] - 0x40 - 1))
+    }
+
+    #[inline(always)]
+    pub fn set_function_mode(&mut self, mode: FunctionMode, enable: bool) -> Result<()> {
+        let start_stop = if enable { Pro2::Start } else { Pro2::Stop };
+        self.pro2(start_stop, mode)?;
+        let _status = self.read_pro2(Pro2Resp::RepStatus)?;
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn set_routing(
+        &mut self,
+        enable: bool,
+        recepter: RoutingRx,
+        emitter: RoutingTx,
+    ) -> Result<()> {
+        let cmd = if enable {
+            Pro3::RoutingOn
+        } else {
+            Pro3::RoutingOff
+        };
+        self.pro3(cmd, recepter, emitter)?;
+        let (_recepter, _status) = self.read_pro3(Pro3Resp::RoutingFrom)?;
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn get_speed(&mut self) -> Result<Baudrate> {
+        self.pro1(Pro1::EnqSpeed)?;
+        let code = self.read_pro2(Pro2Resp::QuerySpeedAnswer)?;
+        Baudrate::try_from(code).map_err(|_| ErrorKind::InvalidData.into())
+    }
+
+    #[inline(always)]
+    pub fn set_rouleau(&mut self, enable: bool) -> Result<()> {
+        self.set_function_mode(FunctionMode::Rouleau, enable)
+    }
+
+    #[inline(always)]
+    pub fn set_procedure(&mut self, enable: bool) -> Result<()> {
+        self.set_function_mode(FunctionMode::Procedure, enable)
+    }
+
+    #[inline(always)]
+    pub fn set_minuscule(&mut self, enable: bool) -> Result<()> {
+        self.set_function_mode(FunctionMode::Minuscule, enable)
+    }
+}
+
+impl<S: MinitelRead> Minitel<S> {
     /// Read a raw sequence from the minitel
     #[inline(always)]
     pub fn read_bytes(&mut self, data: &mut [u8]) -> Result<()> {
@@ -129,6 +195,55 @@ impl<S: SerialPort> Minitel<S> {
             }
             _ => Ok(Stroke::C0(c0)),
         }
+    }
+
+    #[inline(always)]
+    pub fn wait_for(&mut self, byte: impl Into<u8> + Copy) -> Result<()> {
+        for _ in 0..10 {
+            if self.read_byte()? == byte.into() {
+                return Ok(());
+            }
+        }
+        Err(ErrorKind::TimedOut.into())
+    }
+
+    #[inline(always)]
+    pub fn expect_read(&mut self, byte: impl Into<u8> + Copy) -> Result<()> {
+        let got = self.read_byte()?;
+        if got != byte.into() {
+            return Err(ErrorKind::InvalidData.into());
+        }
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub fn read_pro2(&mut self, expected_ack: Pro2Resp) -> Result<u8> {
+        self.wait_for(C0::ESC)?;
+        self.expect_read(Protocol::Pro2)?;
+        self.expect_read(expected_ack)?;
+        self.read_byte()
+    }
+
+    #[inline(always)]
+    pub fn read_pro3(&mut self, expected_ack: Pro3Resp) -> Result<(u8, u8)> {
+        self.wait_for(C0::ESC)?;
+        self.expect_read(Protocol::Pro3)?;
+        self.expect_read(expected_ack)?;
+        Ok((self.read_byte()?, self.read_byte()?))
+    }
+}
+
+impl<S: MinitelWrite> Minitel<S> {
+    /// Write a raw sequence to the minitel
+    #[inline(always)]
+    pub fn write_bytes(&mut self, data: &[u8]) -> Result<()> {
+        self.port.send(data)
+    }
+
+    /// Write a single byte to the minitel
+    #[inline(always)]
+    pub fn write_byte<T: Into<u8> + Copy>(&mut self, byte: T) -> Result<()> {
+        self.write_bytes(&[byte.into()])
     }
 
     /// Flush the serial port
@@ -239,96 +354,6 @@ impl<S: SerialPort> Minitel<S> {
         self.write_str(&s)
     }
 
-    #[inline(always)]
-    pub fn clear_screen(&mut self) -> Result<()> {
-        self.write_byte(C0::FF)
-    }
-
-    #[inline(always)]
-    pub fn wait_for(&mut self, byte: impl Into<u8> + Copy) -> Result<()> {
-        for _ in 0..10 {
-            if self.read_byte()? == byte.into() {
-                return Ok(());
-            }
-        }
-        Err(ErrorKind::TimedOut.into())
-    }
-
-    #[inline(always)]
-    pub fn expect_read(&mut self, byte: impl Into<u8> + Copy) -> Result<()> {
-        let got = self.read_byte()?;
-        if got != byte.into() {
-            return Err(ErrorKind::InvalidData.into());
-        }
-        Ok(())
-    }
-
-    #[inline(always)]
-    pub fn read_rom(&mut self) -> Result<Rom> {
-        self.pro1(Pro1::EnqRom)?;
-        self.wait_for(C0::SOH)?;
-        let mut rom = [0; 3];
-        self.read_bytes(&mut rom)?;
-        self.expect_read(C0::EOL)?;
-        Ok(rom.into())
-    }
-
-    #[inline(always)]
-    pub fn get_pos(&mut self) -> Result<(u8, u8)> {
-        self.write_c1(C1::EnqCursor)?;
-        self.wait_for(C0::US)?;
-        let mut position = [0; 2];
-        self.read_bytes(&mut position)?;
-        Ok((position[1] - 0x40 - 1, position[0] - 0x40 - 1))
-    }
-
-    #[inline(always)]
-    pub fn set_rouleau(&mut self, enable: bool) -> Result<()> {
-        self.set_function_mode(FunctionMode::Rouleau, enable)
-    }
-
-    #[inline(always)]
-    pub fn set_procedure(&mut self, enable: bool) -> Result<()> {
-        self.set_function_mode(FunctionMode::Procedure, enable)
-    }
-
-    #[inline(always)]
-    pub fn set_minuscule(&mut self, enable: bool) -> Result<()> {
-        self.set_function_mode(FunctionMode::Minuscule, enable)
-    }
-
-    #[inline(always)]
-    pub fn set_function_mode(&mut self, mode: FunctionMode, enable: bool) -> Result<()> {
-        let start_stop = if enable { Pro2::Start } else { Pro2::Stop };
-        self.pro2(start_stop, mode)?;
-        let _status = self.read_pro2(Pro2Resp::RepStatus)?;
-        Ok(())
-    }
-
-    #[inline(always)]
-    pub fn set_routing(
-        &mut self,
-        enable: bool,
-        recepter: RoutingRx,
-        emitter: RoutingTx,
-    ) -> Result<()> {
-        let cmd = if enable {
-            Pro3::RoutingOn
-        } else {
-            Pro3::RoutingOff
-        };
-        self.pro3(cmd, recepter, emitter)?;
-        let (_recepter, _status) = self.read_pro3(Pro3Resp::RoutingFrom)?;
-        Ok(())
-    }
-
-    #[inline(always)]
-    pub fn get_speed(&mut self) -> Result<Baudrate> {
-        self.pro1(Pro1::EnqSpeed)?;
-        let code = self.read_pro2(Pro2Resp::QuerySpeedAnswer)?;
-        Baudrate::try_from(code).map_err(|_| ErrorKind::InvalidData.into())
-    }
-
     /// Protocol command with a single argument
     #[inline(always)]
     pub fn pro1(&mut self, x: Pro1) -> Result<()> {
@@ -354,26 +379,10 @@ impl<S: SerialPort> Minitel<S> {
         self.write_bytes(&Protocol::pro3(x, y, z))?;
         Ok(())
     }
-
-    #[inline(always)]
-    pub fn read_pro2(&mut self, expected_ack: Pro2Resp) -> Result<u8> {
-        self.wait_for(C0::ESC)?;
-        self.expect_read(Protocol::Pro2)?;
-        self.expect_read(expected_ack)?;
-        self.read_byte()
-    }
-
-    #[inline(always)]
-    pub fn read_pro3(&mut self, expected_ack: Pro3Resp) -> Result<(u8, u8)> {
-        self.wait_for(C0::ESC)?;
-        self.expect_read(Protocol::Pro3)?;
-        self.expect_read(expected_ack)?;
-        Ok((self.read_byte()?, self.read_byte()?))
-    }
 }
 
 /// Ability to communicate with a minitel through a serial port with baudrate control
-impl<S: SerialPort + BaudrateControl> Minitel<S> {
+impl<S: MinitelRead + MinitelWrite + MinitelBaudrateControl> Minitel<S> {
     pub fn search_speed(&mut self) -> Result<Baudrate> {
         for baudrate in [
             Baudrate::B1200,
@@ -405,22 +414,21 @@ impl<S: SerialPort + BaudrateControl> Minitel<S> {
     }
 }
 
-impl<S: SerialPort> From<S> for Minitel<S> {
-    fn from(port: S) -> Self {
-        Self::new(port)
+impl<T> MinitelRead for T
+where
+    T: std::io::Read,
+{
+    fn read(&mut self, data: &mut [u8]) -> Result<()> {
+        self.read_exact(data)
     }
 }
 
-impl<T> SerialPort for T
+impl<T> MinitelWrite for T
 where
-    T: std::io::Read + std::io::Write,
+    T: std::io::Write,
 {
     fn send(&mut self, data: &[u8]) -> Result<()> {
         self.write_all(data)
-    }
-
-    fn read(&mut self, data: &mut [u8]) -> Result<()> {
-        self.read_exact(data)
     }
 
     fn flush(&mut self) -> Result<()> {
@@ -434,7 +442,7 @@ mod tests {
     #[test]
     pub fn read_stroke() {
         let seq: Vec<_> = "He?! ".bytes().collect();
-        let mut minitel = Minitel::from(std::io::Cursor::new(seq));
+        let mut minitel = Minitel::new(std::io::Cursor::new(seq));
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('H'));
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('e'));
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('?'));
@@ -442,7 +450,7 @@ mod tests {
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char(' '));
 
         let seq: Vec<_> = vec![0x20, 0x13, 0x41, 0x13, 0x49, 0x20, 0x1B, 0x54];
-        let mut minitel = Minitel::from(std::io::Cursor::new(seq));
+        let mut minitel = Minitel::new(std::io::Cursor::new(seq));
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char(' '));
         assert_eq!(
             minitel.read_s0_stroke().unwrap(),
@@ -456,7 +464,7 @@ mod tests {
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::C1(C1::BgBlue));
 
         let seq: Vec<_> = vec![0x19, 0x42, 0x65, 0x19, 0x3D]; // SS2, ', e, SS2, ½
-        let mut minitel = Minitel::from(std::io::Cursor::new(seq));
+        let mut minitel = Minitel::new(std::io::Cursor::new(seq));
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('é'));
         assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('½'));
     }
@@ -464,7 +472,7 @@ mod tests {
     #[test]
     pub fn write_str() {
         let seq: Vec<u8> = Vec::new();
-        let mut minitel = Minitel::from(std::io::Cursor::new(seq));
+        let mut minitel = Minitel::new(std::io::Cursor::new(seq));
         minitel.write_str("Hé½").unwrap();
         let written = minitel.port.into_inner();
         assert_eq!(written, vec![0x48, 0x19, 0x42, 0x65, 0x19, 0x3D]); // H, SS2, ', e, SS2, ½
