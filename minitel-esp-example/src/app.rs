@@ -12,11 +12,19 @@ use ratatui::{
     prelude::*,
     widgets::{
         calendar::{CalendarEventStore, Monthly},
-        Block, Padding, Tabs,
+        Block, Borders, Padding, Tabs,
     },
 };
 use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
-use symbols::border;
+use symbols::{
+    block,
+    border::{
+        self, FULL, QUADRANT_BOTTOM_HALF, QUADRANT_LEFT_HALF, QUADRANT_RIGHT_HALF,
+        QUADRANT_TOP_HALF, QUADRANT_TOP_LEFT_BOTTOM_LEFT_BOTTOM_RIGHT,
+        QUADRANT_TOP_LEFT_TOP_RIGHT_BOTTOM_LEFT, QUADRANT_TOP_LEFT_TOP_RIGHT_BOTTOM_RIGHT,
+        QUADRANT_TOP_RIGHT_BOTTOM_LEFT_BOTTOM_RIGHT,
+    },
+};
 use time::{Date, Duration, Month};
 
 #[derive(Debug)]
@@ -141,15 +149,18 @@ impl Widget for &App {
         match self.selected_tab {
             SelectedTab::Calendrier => {
                 let calendar_area =
-                    center(main_area, Constraint::Length(23), Constraint::Length(10));
+                    center(main_area, Constraint::Length(24), Constraint::Length(9));
                 Monthly::new(self.date, CalendarEventStore::default())
-                    .show_month_header(Style::default().bg(Color::Blue).fg(Color::White))
+                    //.show_month_header(Style::default().bg(Color::Blue).fg(Color::White))
                     .show_weekdays_header(Style::default().fg(Color::Magenta))
                     .show_surrounding(Style::default().fg(Color::Cyan))
                     .block(
                         Block::bordered()
-                            .border_set(border::QUADRANT_INSIDE)
-                            .fg(Color::Blue),
+                            .border_set(QUADRANT_OUTSIDE_TOP_FULL)
+                            .title(calendrier_title(self.date))
+                            //.title_style((Color::White, Color::Blue))
+                            .title_alignment(Alignment::Center)
+                            .style((Color::Blue, Color::White)),
                     )
                     .render(calendar_area, buf);
             }
@@ -165,6 +176,29 @@ impl Widget for &App {
             .style((Color::Blue, Color::Cyan))
             .render(instructions_area, buf);
     }
+}
+
+fn calendrier_title(date: Date) -> Line<'static> {
+    let month = match date.month() {
+        Month::January => "Janvier",
+        Month::February => "Février",
+        Month::March => "Mars",
+        Month::April => "Avril",
+        Month::May => "Mai",
+        Month::June => "Juin",
+        Month::July => "Juillet",
+        Month::August => "Août",
+        Month::September => "Septembre",
+        Month::October => "Octobre",
+        Month::November => "Novembre",
+        Month::December => "Décembre",
+    };
+    Line::from(vec![
+        " < ".fg(Color::Green),
+        format!("{} {}", month, date.year()).fg(Color::White),
+        " > ".fg(Color::Green),
+    ])
+    .bg(Color::Blue)
 }
 
 impl SelectedTab {
@@ -184,7 +218,7 @@ impl SelectedTab {
 
     /// Return tab's name as a styled `Line`
     fn title(self) -> Line<'static> {
-        format!("  {self}  ").fg(Color::Cyan).bg(Color::Red).into()
+        format!(" {self} ").fg(Color::Cyan).bg(Color::Red).into()
     }
 
     /// A block surrounding the tab's content
@@ -212,3 +246,14 @@ fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
     let [area] = Layout::vertical([vertical]).flex(Flex::Center).areas(area);
     area
 }
+
+pub const QUADRANT_OUTSIDE_TOP_FULL: border::Set = border::Set {
+    top_right: block::FULL,
+    top_left: block::FULL,
+    bottom_left: QUADRANT_TOP_LEFT_BOTTOM_LEFT_BOTTOM_RIGHT,
+    bottom_right: QUADRANT_TOP_RIGHT_BOTTOM_LEFT_BOTTOM_RIGHT,
+    vertical_left: QUADRANT_LEFT_HALF,
+    vertical_right: QUADRANT_RIGHT_HALF,
+    horizontal_top: block::FULL,
+    horizontal_bottom: QUADRANT_BOTTOM_HALF,
+};
