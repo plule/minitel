@@ -12,7 +12,8 @@ use ratatui::{
     prelude::*,
     widgets::{
         calendar::{CalendarEventStore, Monthly},
-        Block, Padding, Paragraph, Tabs,
+        canvas::{Canvas, Map, MapResolution},
+        Block, Paragraph, Tabs,
     },
 };
 use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
@@ -25,6 +26,7 @@ use symbols::{
     },
 };
 use time::{Date, Duration, Month};
+use tui_big_text::{BigText, PixelSize};
 
 #[derive(Debug)]
 pub struct App {
@@ -107,8 +109,8 @@ impl App {
                         }
                         _ => {}
                     },
-                    SelectedTab::Tab2 => {}
-                    SelectedTab::Tab3 => {}
+                    SelectedTab::BigText => {}
+                    SelectedTab::World => {}
                 },
             }
         }
@@ -121,10 +123,10 @@ enum SelectedTab {
     #[default]
     #[strum(to_string = "Calendrier")]
     Calendrier,
-    #[strum(to_string = "T2")]
-    Tab2,
-    #[strum(to_string = "T3")]
-    Tab3,
+    #[strum(to_string = "Big Text")]
+    BigText,
+    #[strum(to_string = "World")]
+    World,
 }
 
 impl Widget for &App {
@@ -173,11 +175,29 @@ impl Widget for &App {
                     )
                     .render(calendar_area, buf);
             }
-            SelectedTab::Tab2 => {
+            SelectedTab::BigText => {
+                BigText::builder()
+                    .pixel_size(PixelSize::Sextant)
+                    .style(Style::default().fg(Color::Green))
+                    .lines(vec!["Hello".into(), "World!".into()])
+                    .alignment(Alignment::Center)
+                    .build()
+                    .render(main_area, buf);
                 //main_area_block.render(main_area, buf);
             }
-            SelectedTab::Tab3 => {
-                //main_area_block.render(main_area, buf);
+            SelectedTab::World => {
+                Canvas::default()
+                    .block(Block::bordered().title("World"))
+                    //.marker(self.marker)
+                    .paint(|ctx| {
+                        ctx.draw(&Map {
+                            color: Color::Green,
+                            resolution: MapResolution::High,
+                        });
+                    })
+                    .x_bounds([-180.0, 180.0])
+                    .y_bounds([-90.0, 90.0])
+                    .render(main_area, buf);
             }
         }
 
@@ -229,23 +249,6 @@ impl SelectedTab {
     fn title(self) -> Line<'static> {
         format!(" {self} ").fg(Color::Cyan).bg(Color::Red).into()
     }
-
-    /// A block surrounding the tab's content
-    fn block(self) -> Block<'static> {
-        Block::bordered()
-            .border_set(symbols::border::PROPORTIONAL_TALL)
-            .padding(Padding::horizontal(1))
-            .border_style((Color::White, Color::Black))
-    }
-
-    /*const fn palette(self) -> tailwind::Palette {
-        match self {
-            Self::Tab1 => tailwind::BLUE,
-            Self::Tab2 => tailwind::EMERALD,
-            Self::Tab3 => tailwind::INDIGO,
-            Self::Tab4 => tailwind::RED,
-        }
-    }*/
 }
 
 fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {

@@ -1,4 +1,5 @@
 use crate::IntoSequence;
+use bitvec::{order::Lsb0, view::BitView};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 /// Virtual keystroke sequence
@@ -117,6 +118,101 @@ pub enum C1 {
 impl IntoSequence<2> for C1 {
     fn sequence(self) -> [u8; 2] {
         [C0::ESC.into(), self.into()]
+    }
+}
+
+/// Semi-graphic sextant characters
+///
+/// https://jbellue.github.io/stum1b/#2-2-1-2-8
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct G1(pub u8);
+
+impl From<G1> for u8 {
+    fn from(g1: G1) -> u8 {
+        g1.0
+    }
+}
+
+impl G1 {
+    // Sextant from the unicode Symbols for Legacy Computing (U+1FB0x...)
+    // https://en.wikipedia.org/wiki/Symbols_for_Legacy_Computing
+    // Some values are skipped (zero, full, vertical bars)...
+    // To simplify, use braille as intermediate
+    #[rustfmt::skip]
+    const SEXTANT_TO_BRAILLE: [char; 60] = [
+        '⠁', '⠈', '⠉', '⠂', '⠃', '⠊', '⠋', '⠐', '⠑', '⠘', '⠙', '⠒', '⠓', '⠚', '⠛', '⠄',
+        '⠅', '⠌', '⠍', '⠆', '⠎', '⠏', '⠔', '⠕', '⠜', '⠝', '⠖', '⠗', '⠞', '⠟', '⠠', '⠡',
+        '⠨', '⠩', '⠢', '⠣', '⠪', '⠫', '⠰', '⠱', '⠹', '⠲', '⠳', '⠺', '⠻', '⠤', '⠥', '⠬',
+        '⠭', '⠦', '⠧', '⠮', '⠯', '⠴', '⠵', '⠼', '⠽', '⠶', '⠷', '⠾'
+    ];
+
+    pub fn new(val: u8) -> Self {
+        G1(val)
+    }
+
+    /// Convert from the 3 rows of 2 bits into a G1 character
+    pub fn from_bits(bits: [[bool; 2]; 3]) -> Self {
+        let mut val: u8 = 0;
+        val.view_bits_mut::<Lsb0>().set(0, bits[0][0]);
+        val.view_bits_mut::<Lsb0>().set(1, bits[0][1]);
+        val.view_bits_mut::<Lsb0>().set(2, bits[1][0]);
+        val.view_bits_mut::<Lsb0>().set(3, bits[1][1]);
+        val.view_bits_mut::<Lsb0>().set(4, bits[2][0]);
+        val.view_bits_mut::<Lsb0>().set(5, true);
+        val.view_bits_mut::<Lsb0>().set(6, bits[2][1]);
+        G1(val)
+    }
+
+    /// Render the approximate semi graphic character matching the unicode value
+    pub fn approximate_char(c: char) -> Option<Self> {
+        let c = match c {
+            // sextants: use braille as intermediate
+            '\u{1FB00}'..='\u{1FB3C}' => Self::SEXTANT_TO_BRAILLE[c as usize - 0x1FB00],
+            _ => c,
+        };
+        match c {
+            // braille
+            '\u{2800}'..'\u{2900}' => {
+                let val = c as u32 - 0x2800;
+                let mut bits = [[false; 2]; 3];
+                bits[0][0] = val & 0b00000001 != 0;
+                bits[1][0] = val & 0b00000010 != 0;
+                bits[2][0] = val & 0b00000100 != 0;
+                bits[0][1] = val & 0b00001000 != 0;
+                bits[1][1] = val & 0b00010000 != 0;
+                bits[2][1] = val & 0b00100000 != 0;
+                Some(G1::from_bits(bits))
+            }
+            // quadrants
+            '▘' => Some(G1(0x21)),
+            '▝' => Some(G1(0x22)),
+            '▖' => Some(G1(0x30)),
+            '▗' => Some(G1(0x60)),
+            '▀' => Some(G1(0x23)),
+            '▄' => Some(G1(0x70)),
+            '▌' => Some(G1(0x35)),
+            '▐' => Some(G1(0x6A)),
+            '▙' => Some(G1(0x75)),
+            '▛' => Some(G1(0x37)),
+            '▜' => Some(G1(0x6B)),
+            '▟' => Some(G1(0x7A)),
+            '▚' => Some(G1(0x64)),
+            '▞' => Some(G1(0x26)),
+            '█' => Some(G1(0x7F)),
+            '▉' => Some(G1(0x7F)),
+            '▊' => Some(G1(0x7F)),
+            '▋' => Some(G1(0x35)),
+            '▍' => Some(G1(0x35)),
+            '▎' => Some(G1(0x20)),
+            '▏' => Some(G1(0x20)),
+            '▇' => Some(G1(0x7F)),
+            '▆' => Some(G1(0x7C)),
+            '▅' => Some(G1(0x7C)),
+            '▃' => Some(G1(0x70)),
+            '▂' => Some(G1(0x70)),
+            '▁' => Some(G1(0x20)),
+            _ => None,
+        }
     }
 }
 
@@ -299,5 +395,37 @@ impl GrayScale {
             GrayScale::Gray90 => C1::BgYellow,
             GrayScale::White => C1::BgWhite,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    pub fn semigraphic_from_bits() {
+        assert_eq!(
+            0x20,
+            G1::from_bits([[false, false], [false, false], [false, false]]).0
+        );
+        assert_eq!(
+            0x7F,
+            G1::from_bits([[true, true], [true, true], [true, true]]).0
+        );
+        assert_eq!(
+            0x2C,
+            G1::from_bits([[false, false], [true, true], [false, false]]).0
+        );
+    }
+
+    #[test]
+    pub fn semigraphic_from_char() {
+        assert_eq!(G1::approximate_char('⠉'), Some(G1(0x23)));
+        assert_eq!(G1::approximate_char('⠯'), Some(G1(0x77)));
+        assert_eq!(G1::approximate_char('⡯'), Some(G1(0x77)));
+        assert_eq!(G1::approximate_char('⢯'), Some(G1(0x77)));
+        assert_eq!(G1::approximate_char('⣯'), Some(G1(0x77)));
+        assert_eq!(G1::approximate_char('⣿'), Some(G1(0x7F)));
+        assert_eq!(G1::approximate_char('\u{1FB00}'), Some(G1(0x21)));
+        assert_eq!(G1::approximate_char('\u{1FB28}'), Some(G1(0x6B)));
     }
 }

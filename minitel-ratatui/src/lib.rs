@@ -2,10 +2,9 @@ use backend::WindowSize;
 
 use ratatui::backend::Backend;
 use ratatui::prelude::*;
-use symbols::line;
 
 use minitel_stum::{
-    videotex::{GrayScale, C0, C1},
+    videotex::{GrayScale, C0, C1, G1},
     Minitel, MinitelRead, MinitelWrite,
 };
 
@@ -32,114 +31,11 @@ impl CharKind {
 
 impl From<&str> for CharKind {
     fn from(c: &str) -> Self {
-        match c {
-            "▘" => CharKind::SemiGraphic(0x21),
-            "▝" => CharKind::SemiGraphic(0x22),
-            "▖" => CharKind::SemiGraphic(0x30),
-            "▗" => CharKind::SemiGraphic(0x60),
-            "▀" => CharKind::SemiGraphic(0x23),
-            "▄" => CharKind::SemiGraphic(0x70),
-            "▌" => CharKind::SemiGraphic(0x35),
-            "▐" => CharKind::SemiGraphic(0x6A),
-            "▙" => CharKind::SemiGraphic(0x75),
-            "▛" => CharKind::SemiGraphic(0x37),
-            "▜" => CharKind::SemiGraphic(0x6B),
-            "▟" => CharKind::SemiGraphic(0x7A),
-            "▚" => CharKind::SemiGraphic(0x64),
-            "▞" => CharKind::SemiGraphic(0x26),
-            "█" => CharKind::SemiGraphic(0x7F),
-            "▉" => CharKind::SemiGraphic(0x7F),
-            "▊" => CharKind::SemiGraphic(0x7F),
-            "▋" => CharKind::SemiGraphic(0x35),
-            "▍" => CharKind::SemiGraphic(0x35),
-            "▎" => CharKind::SemiGraphic(0x20),
-            "▏" => CharKind::SemiGraphic(0x20),
-            "▇" => CharKind::SemiGraphic(0x7F),
-            "▆" => CharKind::SemiGraphic(0x7C),
-            "▅" => CharKind::SemiGraphic(0x7C),
-            "▃" => CharKind::SemiGraphic(0x70),
-            "▂" => CharKind::SemiGraphic(0x70),
-            "▁" => CharKind::SemiGraphic(0x20),
-            line::DOUBLE_HORIZONTAL => CharKind::SemiGraphic(0x73),
-            line::DOUBLE_VERTICAL => CharKind::SemiGraphic(0x7F),
-            line::DOUBLE_TOP_LEFT => CharKind::SemiGraphic(0x77),
-            line::DOUBLE_TOP_RIGHT => CharKind::SemiGraphic(0x7B),
-            line::DOUBLE_BOTTOM_LEFT => CharKind::SemiGraphic(0x77),
-            line::DOUBLE_BOTTOM_RIGHT => CharKind::SemiGraphic(0x7B),
-
-            /*"⠀" => CharKind::SemiGraphic(0x20),
-            "⠁" => CharKind::SemiGraphic(0x21),
-            "⠈" => CharKind::SemiGraphic(0x22),
-            "⠉" => CharKind::SemiGraphic(0x23),
-            "⠂" => CharKind::SemiGraphic(0x24),
-            "⠃" => CharKind::SemiGraphic(0x25),
-            "⠊" => CharKind::SemiGraphic(0x26),
-            "⠋" => CharKind::SemiGraphic(0x27),
-            "⠐" => CharKind::SemiGraphic(0x28),
-            "⠢" => CharKind::SemiGraphic(0x29),
-
-
-
-            "⠔" =>
-            "⠠" => ,
-            "⠰" => ,
-            "⠑" => ,
-            "⠡" => ,
-            "⠱" => ,
-            "⠒" => ,
-
-            "⠲" => ,
-            "⠓" => ,
-            "⠣" => ,
-            "⠳" => ,
-            "⠄" => ,
-
-            "⠤" => ,
-            "⠴" => ,
-            "⠅" => ,
-            "⠕" => ,
-            "⠥" => ,
-            "⠵" => ,
-            "⠆" => ,
-            "⠖" => ,
-            "⠦" => ,
-            "⠶" => ,
-            "⠇" => ,
-            "⠗" => ,
-            "⠧" => ,
-            "⠷" => ,
-            "⠘" => ,
-            "⠨" => ,
-            "⠸" => ,
-
-            "⠙" => ,
-            "⠩" => ,
-            "⠹" => ,
-
-            "⠚" => ,
-            "⠪" => ,
-            "⠺" => ,
-
-            "⠛" => ,
-            "⠫" => ,
-            "⠻" => ,
-            "⠌" => ,
-            "⠜" => ,
-            "⠬" => ,
-            "⠼" => ,
-            "⠍" => ,
-            "⠝" => ,
-            "⠭" => ,
-            "⠽" => ,
-            "⠎" => ,
-            "⠞" => ,
-            "⠮" => ,
-            "⠾" => ,
-            "⠏" => ,
-            "⠟" => ,
-            "⠯" => ,
-            "⠿" => ,*/
-            _ => CharKind::Alphabet(c.chars().next().unwrap()),
+        let c = c.chars().next().unwrap();
+        if let Some(c) = G1::approximate_char(c) {
+            return CharKind::SemiGraphic(c.0);
+        } else {
+            return CharKind::Alphabet(c);
         }
     }
 }
