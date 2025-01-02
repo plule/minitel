@@ -5,24 +5,23 @@ use minitel::{
     stum::{
         protocol::{Baudrate, RoutingRx, RoutingTx},
         videotex::{Stroke, TouchesFonction},
+        Minitel, MinitelRead, MinitelWrite,
     },
-    ESPMinitel, ESPTerminal,
+    MinitelBackend,
 };
 use ratatui::{
     prelude::*,
     widgets::{
         calendar::{CalendarEventStore, Monthly},
-        Block, Borders, Padding, Tabs,
+        Block, Padding, Tabs,
     },
 };
 use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
 use symbols::{
     block,
     border::{
-        self, FULL, QUADRANT_BOTTOM_HALF, QUADRANT_LEFT_HALF, QUADRANT_RIGHT_HALF,
-        QUADRANT_TOP_HALF, QUADRANT_TOP_LEFT_BOTTOM_LEFT_BOTTOM_RIGHT,
-        QUADRANT_TOP_LEFT_TOP_RIGHT_BOTTOM_LEFT, QUADRANT_TOP_LEFT_TOP_RIGHT_BOTTOM_RIGHT,
-        QUADRANT_TOP_RIGHT_BOTTOM_LEFT_BOTTOM_RIGHT,
+        self, QUADRANT_BOTTOM_HALF, QUADRANT_LEFT_HALF, QUADRANT_RIGHT_HALF,
+        QUADRANT_TOP_LEFT_BOTTOM_LEFT_BOTTOM_RIGHT, QUADRANT_TOP_RIGHT_BOTTOM_LEFT_BOTTOM_RIGHT,
     },
 };
 use time::{Date, Duration, Month};
@@ -46,14 +45,13 @@ impl Default for App {
 
 impl App {
     /// runs the application's main loop until the user quits
-    pub fn run(&mut self, terminal: &mut ESPTerminal) -> io::Result<()> {
+    pub fn run<B: MinitelRead + MinitelWrite>(
+        &mut self,
+        terminal: &mut Terminal<MinitelBackend<B>>,
+    ) -> io::Result<()> {
         log::info!("Running App");
         terminal.clear()?;
-        terminal.backend_mut().minitel.set_speed(Baudrate::B9600)?;
-        terminal
-            .backend_mut()
-            .minitel
-            .set_routing(false, RoutingRx::Modem, RoutingTx::Keyboard)?;
+
         log::info!("Running the event loop");
         let loop_result = self.event_loop(terminal);
         log::info!("Event loop ended");
@@ -61,16 +59,19 @@ impl App {
             log::error!("Error in event loop: {:?}", err);
         }
         terminal.clear()?;
-        terminal
-            .backend_mut()
-            .minitel
-            .set_routing(true, RoutingRx::Modem, RoutingTx::Keyboard)?;
+
         Ok(())
     }
 
-    fn event_loop(&mut self, terminal: &mut ESPTerminal) -> io::Result<()> {
+    fn event_loop<B: MinitelRead + MinitelWrite>(
+        &mut self,
+        terminal: &mut Terminal<MinitelBackend<B>>,
+    ) -> io::Result<()> {
+        log::info!("Entering event loop");
         while !self.exit {
+            log::info!("Drawing frame");
             terminal.draw(|frame| self.draw(frame))?;
+            log::info!("Handling events");
             self.handle_events(&mut terminal.backend_mut().minitel)?;
         }
         Ok(())
@@ -80,7 +81,10 @@ impl App {
         frame.render_widget(self, frame.area());
     }
 
-    fn handle_events(&mut self, minitel: &mut ESPMinitel) -> io::Result<()> {
+    fn handle_events<B: MinitelRead + MinitelWrite>(
+        &mut self,
+        minitel: &mut Minitel<B>,
+    ) -> io::Result<()> {
         if let Ok(b) = minitel.read_s0_stroke() {
             log::info!("Received strocke {:?}", b);
             match b {

@@ -22,4 +22,6 @@ CRATE_CC_NO_DEFAULTS = "1"
 
 # Explicit workspace directory for embuild to find its config even with CARGO_TARGET_DIR set
 CARGO_WORKSPACE_DIR = { value = "", relative = true }
-ESP_IDF_SDKCONFIG = "sdkconfig.defaults"
+ESP_IDF_SDKCONFIG = "minitel-app-example/sdkconfig.defaults"
+
+[workspace]

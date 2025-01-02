@@ -4,8 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["minitel-ratatui", "minitel-stum", "minitel-ws"]
-exclude = ["minitel-esp", "minitel-esp-example"]
+members = [
+    "minitel-ratatui",
+    "minitel-stum",
+    "minitel-ws",
+    "minitel-esp",
+    "minitel-app-example",
+]
+
 
 [dependencies]
 minitel-stum = { version = "0.1.0", path = "minitel-stum" }

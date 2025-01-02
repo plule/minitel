@@ -2,13 +2,18 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "minitel-esp"
-		},
-		{
-			"path": "minitel-esp-example"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"rust-analyzer.cargo.allTargets": false,
+		"rust-analyzer.check.extraArgs": [
+			"--exclude=minitel-esp*"
+		],
+		"rust-analyzer.files.excludeDirs": [
+			"minitel-esp"
+		],
+		"rust-analyzer.cargo.features": [
+			"ws"
+		],
+	}
 }

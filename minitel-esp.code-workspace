@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"rust-analyzer.cargo.allTargets": false,
+		"rust-analyzer.cargo.extraArgs": [
+			"--config=minitel-app-example/cargo-config-esp.toml"
+		],
+		"rust-analyzer.cargo.features": [
+			"esp"
+		],
+		"terminal.integrated.env.windows": {
+			"RUSTUP_TOOLCHAIN": "esp"
+		},
+		"terminal.integrated.env.linux": {
+			"RUSTUP_TOOLCHAIN": "esp"
+		}
+	}
+}
