@@ -3,7 +3,6 @@ use std::io;
 use layout::Flex;
 use minitel::{
     stum::{
-        protocol::{Baudrate, RoutingRx, RoutingTx},
         videotex::{Stroke, TouchesFonction},
         Minitel, MinitelRead, MinitelWrite,
     },
@@ -13,10 +12,11 @@ use ratatui::{
     prelude::*,
     widgets::{
         calendar::{CalendarEventStore, Monthly},
-        Block, Padding, Tabs,
+        Block, Padding, Paragraph, Tabs,
     },
 };
 use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
+use style::Styled;
 use symbols::{
     block,
     border::{
@@ -129,13 +129,18 @@ enum SelectedTab {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let [no_area, mut title_area, main_area, instructions_area] = Layout::vertical([
+        let [title_area, tabs_area, main_area, instructions_area] = Layout::vertical([
             Constraint::Length(1),
             Constraint::Length(1),
             Constraint::Fill(1),
             Constraint::Length(2),
         ])
         .areas(area);
+
+        Paragraph::new(" Minitel App Example ")
+            .style(Style::default().set_style((Color::Yellow, Color::Black)))
+            .alignment(Alignment::Center)
+            .render(title_area, buf);
 
         let titles = SelectedTab::iter().map(SelectedTab::title);
         let selected_tab_index = self.selected_tab as usize;
@@ -144,7 +149,7 @@ impl Widget for &App {
             .select(selected_tab_index)
             .padding("", "")
             .divider(" ")
-            .render(title_area, buf);
+            .render(tabs_area, buf);
 
         Block::default()
             .style((Color::Blue, Color::Yellow))
