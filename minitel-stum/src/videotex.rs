@@ -1,5 +1,7 @@
 use crate::IntoSequence;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use smallvec::SmallVec;
+use unicode_normalization::UnicodeNormalization;
 
 /// Virtual keystroke sequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,6 +13,44 @@ pub enum Stroke {
     // ESC C1 control character
     C1(C1),
     Fonction(TouchesFonction),
+}
+
+/// Normal characters ("code")
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SIChar {
+    /// Basic character, nearly ascii
+    G0(G0),
+    /// Accentuated character
+    G0Diacritic(G0, G2),
+    /// Special character ($, £, ...)
+    G2(G2),
+}
+
+impl TryFrom<char> for SIChar {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        // Check for basic characters
+        if let Ok(g0) = G0::try_from(value) {
+            return Ok(SIChar::G0(g0));
+        }
+
+        // Check for special characters
+        if let Ok(g2) = G2::try_from(value) {
+            return Ok(SIChar::G2(g2));
+        }
+
+        // Diacritics
+        let parts: SmallVec<[char; 2]> = value.nfd().take(2).collect();
+        if let (Some(base), Some(diacritic)) = (parts.get(0), parts.get(1)) {
+            if let (Ok(g0), Some(diacritic)) =
+                (G0::try_from(*base), G2::try_from_diactric(*diacritic))
+            {
+                return Ok(SIChar::G0Diacritic(g0, diacritic));
+            }
+        }
+        Err(())
+    }
 }
 
 /// Base control characters
@@ -126,7 +166,7 @@ impl IntoSequence<2> for C1 {
 ///
 /// https://jbellue.github.io/stum1b/#2-2-1-2-8
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct G0(u8);
+pub struct G0(pub u8);
 
 impl Into<u8> for G0 {
     fn into(self) -> u8 {
@@ -248,6 +288,7 @@ impl G1 {
                 bits[2][1] = val & 0b00100000 != 0;
                 Some(G1::from_bits(bits))
             }
+            ' ' => Some(G1(0x20)),
             // quadrants
             '▘' => Some(G1(0x21)),
             '▝' => Some(G1(0x22)),

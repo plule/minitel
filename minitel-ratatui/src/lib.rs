@@ -4,7 +4,7 @@ use ratatui::backend::Backend;
 use ratatui::prelude::*;
 
 use minitel_stum::{
-    videotex::{GrayScale, C0, C1, G1},
+    videotex::{GrayScale, SIChar, C0, C1, G0, G1, G2},
     Minitel, MinitelRead, MinitelWrite,
 };
 
@@ -14,7 +14,7 @@ use minitel_stum::{
 pub enum CharKind {
     None,
     /// Last char was a normal char
-    Alphabet(char),
+    Alphabet(SIChar),
     /// Last char was a semi-graphic char
     SemiGraphic(G1),
 }
@@ -25,17 +25,6 @@ impl CharKind {
             CharKind::None => C0::NUL,
             CharKind::Alphabet(_) => C0::SI,
             CharKind::SemiGraphic(_) => C0::SO,
-        }
-    }
-}
-
-impl From<&str> for CharKind {
-    fn from(c: &str) -> Self {
-        let c = c.chars().next().unwrap();
-        if let Some(g1) = G1::approximate_char(c) {
-            return CharKind::SemiGraphic(g1);
-        } else {
-            return CharKind::Alphabet(c);
         }
     }
 }
@@ -129,7 +118,25 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
             }
 
             // Chose between a char or a semi graphic
-            let char_kind = CharKind::from(cell.symbol());
+            // The crossed out modifier is taken as prefering a semi graphic char
+            let c = cell.symbol().chars().next().unwrap();
+            let char_kind = if cell.modifier.contains(Modifier::CROSSED_OUT) {
+                G1::approximate_char(c)
+                    .map(CharKind::SemiGraphic)
+                    .unwrap_or_else(|| {
+                        SIChar::try_from(c)
+                            .map(CharKind::Alphabet)
+                            .unwrap_or(CharKind::None)
+                    })
+            } else {
+                SIChar::try_from(c)
+                    .map(CharKind::Alphabet)
+                    .unwrap_or_else(|_| {
+                        G1::approximate_char(c)
+                            .map(CharKind::SemiGraphic)
+                            .unwrap_or(CharKind::None)
+                    })
+            };
 
             // Check if the previous context is invalidated
             if self.cursor_position != (x, y)
@@ -148,7 +155,7 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
             }
 
             match char_kind {
-                CharKind::Alphabet(' ') => {
+                CharKind::Alphabet(SIChar::G0(G0(0x20))) => {
                     // Empty char, update the zone attributes if necessary
                     if self.zone_attributes != zone_attributes {
                         for attr in &zone_attributes {
@@ -167,7 +174,7 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
                         self.char_attributes.clone_from(&char_attributes);
                     }
 
-                    self.minitel.write_char(c)?;
+                    self.minitel.si_char(c)?;
                 }
                 CharKind::SemiGraphic(c) => {
                     // Semigraphic char, update both the zone and char attributes if necessary

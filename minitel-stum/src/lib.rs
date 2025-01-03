@@ -14,9 +14,7 @@ use crate::{
     videotex::{C0, C1, G2},
 };
 
-use smallvec::SmallVec;
-use unicode_normalization::UnicodeNormalization;
-use videotex::{Stroke, TouchesFonction, G0};
+use videotex::{SIChar, Stroke, TouchesFonction, G0};
 
 use std::io::{Error, ErrorKind, Result};
 
@@ -316,24 +314,22 @@ impl<S: MinitelWrite> Minitel<S> {
     }
 
     pub fn write_char(&mut self, c: char) -> Result<()> {
-        if let Ok(g0) = G0::try_from(c) {
-            self.write_byte(g0)?;
+        if let Ok(c) = SIChar::try_from(c) {
+            self.si_char(c)?;
             return Ok(());
         }
+        Err(ErrorKind::InvalidData.into())
+    }
 
-        // Check if it's a single G2 char
-        if let Ok(g2) = G2::try_from(c) {
-            self.write_g2(g2)?;
-            return Ok(());
+    pub fn si_char(&mut self, c: SIChar) -> Result<()> {
+        match c {
+            SIChar::G0(g0) => self.write_byte(g0)?,
+            SIChar::G0Diacritic(g0, g2) => {
+                self.write_g2(g2)?;
+                self.write_byte(g0)?;
+            }
+            SIChar::G2(g2) => self.write_g2(g2)?,
         }
-
-        // Diacritics
-        let parts: SmallVec<[char; 2]> = c.nfd().take(2).collect();
-        if let Some(diacritic) = parts.get(1).and_then(|c| G2::try_from_diactric(*c)) {
-            self.write_g2(diacritic)?;
-        }
-        self.write_byte(parts[0] as u8)?;
-
         Ok(())
     }
 

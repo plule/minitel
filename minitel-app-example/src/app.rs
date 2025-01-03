@@ -32,7 +32,7 @@ use tui_big_text::{BigText, PixelSize};
 pub struct App {
     selected_tab: SelectedTab,
     date: Date,
-    underline_border: bool,
+    demo_disjoint: bool,
     exit: bool,
 }
 
@@ -41,7 +41,7 @@ impl Default for App {
         Self {
             selected_tab: SelectedTab::Bienvenue,
             date: Date::from_calendar_date(2025, Month::January, 15).unwrap(),
-            underline_border: false,
+            demo_disjoint: false,
             exit: false,
         }
     }
@@ -105,9 +105,9 @@ impl App {
                         }
                         _ => {}
                     },
-                    SelectedTab::Borders => match b {
+                    SelectedTab::Borders | SelectedTab::World => match b {
                         Stroke::Fonction(TouchesFonction::Envoi) => {
-                            self.underline_border = !self.underline_border;
+                            self.demo_disjoint = !self.demo_disjoint;
                         }
                         _ => {}
                     },
@@ -185,9 +185,9 @@ impl Widget for &App {
                     .pixel_size(PixelSize::Sextant)
                     .style(Style::default().set_style((Color::Blue, self.selected_tab.color())))
                     .lines(vec![
-                        "Bienvenue".into(),
+                        "Bienvenue".slow_blink().into(),
                         "dans le".into(),
-                        "Minitel !".into(),
+                        "Minitel !".underlined().crossed_out().into(),
                     ])
                     .centered()
                     .build()
@@ -205,7 +205,10 @@ impl Widget for &App {
                     .x_bounds([-180.0, 180.0])
                     .y_bounds([-90.0, 90.0])
                     .render(main_area, buf);
-                //buf.set_style(main_area, Style::default().underlined());
+                buf.set_style(main_area, Style::default().crossed_out()); // Force semi-graphic mode
+                if self.demo_disjoint {
+                    buf.set_style(main_area, Style::default().underlined());
+                }
             }
             SelectedTab::Borders => {
                 let [h1, h2] =
@@ -230,7 +233,7 @@ impl Widget for &App {
                 .areas(h2);
 
                 let mut border_style = Style::default();
-                if self.underline_border {
+                if self.demo_disjoint {
                     border_style = border_style.underlined();
                 }
                 border_demo(
@@ -293,7 +296,7 @@ impl Widget for &App {
                 " Mois:".into(),
                 " Correction/Annulation".reversed().into(),
             ]),
-            SelectedTab::Borders => {
+            SelectedTab::Borders | SelectedTab::World => {
                 Line::from(vec![" Joint/Disjoint:".into(), " Envoi".reversed().into()])
             }
             _ => Line::default(),
