@@ -97,6 +97,10 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
                 true => C1::BeginUnderline,
                 false => C1::EndUnderline,
             });
+            zone_attributes.push(match cell.modifier.contains(Modifier::REVERSED) {
+                true => C1::InvertBg,
+                false => C1::NormalBg,
+            });
 
             // Char attributes: foreground color, blink, ...
             let mut char_attributes = Vec::new();

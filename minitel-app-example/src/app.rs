@@ -148,6 +148,7 @@ impl Widget for &App {
         let selected_tab_index = self.selected_tab as usize;
         Tabs::new(titles)
             .select(selected_tab_index)
+            .highlight_style(Style::default())
             .padding("", "")
             .divider(" ")
             .render(tabs_area, buf);
@@ -172,8 +173,6 @@ impl Widget for &App {
                 Paragraph::new(" Di Lun Mar Mer Je Ve Sa ".fg(Color::Magenta).underlined())
                     .render(weekdays_area, buf);
                 Monthly::new(self.date, CalendarEventStore::default())
-                    //.show_month_header(Style::default().bg(Color::Blue).fg(Color::White))
-                    //.show_weekdays_header(Style::default().fg(Color::Magenta))
                     .show_surrounding(Style::default().fg(Color::Cyan))
                     .render(days_area, buf);
             }
@@ -206,9 +205,15 @@ impl Widget for &App {
             }
         }
 
-        Block::default()
-            .style((Color::Yellow, Color::Blue))
-            .render(instructions_area, buf);
+        Paragraph::new(vec![Line::from(vec![
+            " Onglets:".into(),
+            " Suite/Retour".reversed().into(),
+        ])])
+        .style((Color::Yellow, Color::Blue))
+        .render(instructions_area, buf);
+        /*Block::default()
+        .style((Color::Yellow, Color::Blue))
+        .render(instructions_area, buf);*/
     }
 }
 
