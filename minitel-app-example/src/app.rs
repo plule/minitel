@@ -38,7 +38,7 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            selected_tab: SelectedTab::Calendrier,
+            selected_tab: SelectedTab::Bienvenue,
             date: Date::from_calendar_date(2025, Month::January, 15).unwrap(),
             exit: false,
         }
@@ -109,7 +109,7 @@ impl App {
                         }
                         _ => {}
                     },
-                    SelectedTab::BigText => {}
+                    SelectedTab::Bienvenue => {}
                     SelectedTab::World => {}
                 },
             }
@@ -121,11 +121,11 @@ impl App {
 #[derive(Default, Clone, Copy, Debug, Display, FromRepr, EnumIter)]
 enum SelectedTab {
     #[default]
+    #[strum(to_string = "Bienvenue")]
+    Bienvenue,
     #[strum(to_string = "Calendrier")]
     Calendrier,
-    #[strum(to_string = "Big Text")]
-    BigText,
-    #[strum(to_string = "World")]
+    #[strum(to_string = "Monde")]
     World,
 }
 
@@ -140,7 +140,7 @@ impl Widget for &App {
         .areas(area);
 
         Paragraph::new(" Minitel App Example ")
-            .style(Style::default().set_style((Color::Yellow, Color::Black)))
+            .style((Color::Yellow, Color::Black))
             .alignment(Alignment::Center)
             .render(title_area, buf);
 
@@ -160,29 +160,32 @@ impl Widget for &App {
             SelectedTab::Calendrier => {
                 let calendar_area =
                     center(main_area, Constraint::Length(24), Constraint::Length(9));
+                let calendar_block = Block::bordered()
+                    .border_set(QUADRANT_OUTSIDE_TOP_FULL)
+                    .title(calendrier_title(self.date))
+                    .title_alignment(Alignment::Center)
+                    .style((Color::Blue, Color::White));
+                let [weekdays_area, days_area] =
+                    Layout::vertical([Constraint::Length(1), Constraint::Fill(1)])
+                        .areas(calendar_block.inner(calendar_area));
+                calendar_block.render(calendar_area, buf);
+                Paragraph::new(" Di Lun Mar Mer Je Ve Sa ".fg(Color::Magenta).underlined())
+                    .render(weekdays_area, buf);
                 Monthly::new(self.date, CalendarEventStore::default())
                     //.show_month_header(Style::default().bg(Color::Blue).fg(Color::White))
-                    .show_weekdays_header(Style::default().fg(Color::Magenta))
+                    //.show_weekdays_header(Style::default().fg(Color::Magenta))
                     .show_surrounding(Style::default().fg(Color::Cyan))
-                    .block(
-                        Block::bordered()
-                            .border_set(QUADRANT_OUTSIDE_TOP_FULL)
-                            .title(calendrier_title(self.date))
-                            //.title_style((Color::White, Color::Blue))
-                            .title_alignment(Alignment::Center)
-                            .style((Color::Blue, Color::White)),
-                    )
-                    .render(calendar_area, buf);
+                    .render(days_area, buf);
             }
-            SelectedTab::BigText => {
+            SelectedTab::Bienvenue => {
                 let big_text_area = vcenter(main_area, Constraint::Length(10));
                 BigText::builder()
                     .pixel_size(PixelSize::Sextant)
-                    .style(Style::default().fg(Color::Blue))
+                    .style(Style::default().set_style((Color::Blue, self.selected_tab.color())))
                     .lines(vec![
                         "Bienvenue".into(),
                         "dans le".into(),
-                        "Minitel !".slow_blink().into(),
+                        "Minitel !".into(),
                     ])
                     .centered()
                     .build()
@@ -255,7 +258,7 @@ impl SelectedTab {
     fn color(self) -> Color {
         match self {
             SelectedTab::Calendrier => Color::Yellow,
-            SelectedTab::BigText => Color::Cyan,
+            SelectedTab::Bienvenue => Color::Cyan,
             SelectedTab::World => Color::Magenta,
         }
     }

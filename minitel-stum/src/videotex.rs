@@ -104,8 +104,10 @@ pub enum C1 {
     /// 100%
     BgWhite = 0x57,
     Mask = 0x58,
-    StartLigning = 0x59,
-    EndLigning = 0x5A,
+    /// End underline, or disjoint semi-graphic
+    EndUnderline = 0x59,
+    /// Begin underline, or disjoint semi-graphic
+    BeginUnderline = 0x5A,
     Csi = 0x5B,
     NormalBg = 0x5C,
     InvertBg = 0x5D,
