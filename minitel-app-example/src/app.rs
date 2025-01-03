@@ -147,14 +147,13 @@ impl Widget for &App {
         let titles = SelectedTab::iter().map(SelectedTab::title);
         let selected_tab_index = self.selected_tab as usize;
         Tabs::new(titles)
-            .highlight_style((Color::Blue, Color::Yellow))
             .select(selected_tab_index)
             .padding("", "")
             .divider(" ")
             .render(tabs_area, buf);
 
         Block::default()
-            .style((Color::Blue, Color::Yellow))
+            .bg(self.selected_tab.color())
             .render(main_area, buf);
 
         match self.selected_tab {
@@ -176,25 +175,28 @@ impl Widget for &App {
                     .render(calendar_area, buf);
             }
             SelectedTab::BigText => {
+                let big_text_area = vcenter(main_area, Constraint::Length(10));
                 BigText::builder()
                     .pixel_size(PixelSize::Sextant)
-                    .style(Style::default().fg(Color::Green))
-                    .lines(vec!["Hello".into(), "World!".into()])
-                    .alignment(Alignment::Center)
+                    .style(Style::default().fg(Color::Blue))
+                    .lines(vec![
+                        "Bienvenue".into(),
+                        "dans le".into(),
+                        "Minitel !".slow_blink().into(),
+                    ])
+                    .centered()
                     .build()
-                    .render(main_area, buf);
-                //main_area_block.render(main_area, buf);
+                    .render(big_text_area, buf);
             }
             SelectedTab::World => {
                 Canvas::default()
-                    //.block(Block::bordered().title("World"))
-                    //.marker(self.marker)
                     .paint(|ctx| {
                         ctx.draw(&Map {
                             color: Color::Green,
                             resolution: MapResolution::High,
                         });
                     })
+                    .background_color(self.selected_tab.color())
                     .x_bounds([-180.0, 180.0])
                     .y_bounds([-90.0, 90.0])
                     .render(main_area, buf);
@@ -202,7 +204,7 @@ impl Widget for &App {
         }
 
         Block::default()
-            .style((Color::Blue, Color::Cyan))
+            .style((Color::Yellow, Color::Blue))
             .render(instructions_area, buf);
     }
 }
@@ -247,7 +249,15 @@ impl SelectedTab {
 
     /// Return tab's name as a styled `Line`
     fn title(self) -> Line<'static> {
-        format!(" {self} ").fg(Color::Cyan).bg(Color::Red).into()
+        format!(" {self} ").fg(Color::Black).bg(self.color()).into()
+    }
+
+    fn color(self) -> Color {
+        match self {
+            SelectedTab::Calendrier => Color::Yellow,
+            SelectedTab::BigText => Color::Cyan,
+            SelectedTab::World => Color::Magenta,
+        }
     }
 }
 
@@ -255,6 +265,11 @@ fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
     let [area] = Layout::horizontal([horizontal])
         .flex(Flex::Center)
         .areas(area);
+    let [area] = Layout::vertical([vertical]).flex(Flex::Center).areas(area);
+    area
+}
+
+fn vcenter(area: Rect, vertical: Constraint) -> Rect {
     let [area] = Layout::vertical([vertical]).flex(Flex::Center).areas(area);
     area
 }
