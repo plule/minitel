@@ -1,5 +1,4 @@
 use crate::IntoSequence;
-use bitvec::{order::Lsb0, view::BitView};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 /// Virtual keystroke sequence
@@ -216,14 +215,13 @@ impl G1 {
 
     /// Convert from the 3 rows of 2 bits into a G1 character
     pub fn from_bits(bits: [[bool; 2]; 3]) -> Self {
-        let mut val: u8 = 0;
-        val.view_bits_mut::<Lsb0>().set(0, bits[0][0]);
-        val.view_bits_mut::<Lsb0>().set(1, bits[0][1]);
-        val.view_bits_mut::<Lsb0>().set(2, bits[1][0]);
-        val.view_bits_mut::<Lsb0>().set(3, bits[1][1]);
-        val.view_bits_mut::<Lsb0>().set(4, bits[2][0]);
-        val.view_bits_mut::<Lsb0>().set(5, true);
-        val.view_bits_mut::<Lsb0>().set(6, bits[2][1]);
+        let val: u8 = (bits[0][0] as u8) << 0
+            | (bits[0][1] as u8) << 1
+            | (bits[1][0] as u8) << 2
+            | (bits[1][1] as u8) << 3
+            | (bits[2][0] as u8) << 4
+            | (true as u8) << 5
+            | (bits[2][1] as u8) << 6;
         G1(val)
     }
 
