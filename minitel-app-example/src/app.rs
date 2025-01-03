@@ -96,21 +96,20 @@ impl App {
                 Stroke::Fonction(TouchesFonction::Retour) => {
                     self.selected_tab = self.selected_tab.previous()
                 }
-                Stroke::Fonction(TouchesFonction::Sommaire) => self.exit = true,
+                Stroke::Fonction(TouchesFonction::ConnexionFin) => self.exit = true,
                 _ => match self.selected_tab {
                     SelectedTab::Calendrier => match b {
-                        Stroke::Char('#') => {
+                        Stroke::Fonction(TouchesFonction::Correction) => {
                             self.date = self.date.saturating_add(Duration::days(20));
                             self.date = self.date.replace_day(15).unwrap();
                         }
-                        Stroke::Char('*') => {
+                        Stroke::Fonction(TouchesFonction::Annulation) => {
                             self.date = self.date.saturating_sub(Duration::days(20));
                             self.date = self.date.replace_day(15).unwrap();
                         }
                         _ => {}
                     },
-                    SelectedTab::Bienvenue => {}
-                    SelectedTab::World => {}
+                    _ => {}
                 },
             }
         }
@@ -123,10 +122,12 @@ enum SelectedTab {
     #[default]
     #[strum(to_string = "Bienvenue")]
     Bienvenue,
-    #[strum(to_string = "Calendrier")]
+    #[strum(to_string = "Cal")]
     Calendrier,
     #[strum(to_string = "Monde")]
     World,
+    #[strum(to_string = "Bordures")]
+    Borders,
 }
 
 impl Widget for &App {
@@ -203,14 +204,66 @@ impl Widget for &App {
                     .y_bounds([-90.0, 90.0])
                     .render(main_area, buf);
             }
+            SelectedTab::Borders => {
+                let [l1, l2, l3] = Layout::vertical([
+                    Constraint::Fill(1),
+                    Constraint::Fill(1),
+                    Constraint::Fill(1),
+                ])
+                .spacing(1)
+                .margin(1)
+                .areas(main_area);
+                Paragraph::new(" Bordure pleine ")
+                    .centered()
+                    .style((Color::Blue, Color::Cyan))
+                    .block(
+                        Block::bordered()
+                            .title(" Full ".set_style((Color::Yellow, Color::Black)))
+                            .border_set(border::FULL)
+                            .border_style((Color::Black, Color::Green)),
+                    )
+                    .render(l1, buf);
+                Paragraph::new(" Quadrants intérieur ")
+                    .centered()
+                    .style((Color::Blue, Color::Cyan))
+                    .block(
+                        Block::bordered()
+                            .title(" Quadrants Inside ".set_style((Color::Yellow, Color::Black)))
+                            .border_set(border::QUADRANT_INSIDE)
+                            .border_style((Color::Black, Color::Green)),
+                    )
+                    .render(l2, buf);
+                Paragraph::new(" Quadrants extérieur ")
+                    .centered()
+                    .style((Color::Blue, Color::Cyan))
+                    .block(
+                        Block::bordered()
+                            .title(" Quadrants Outside ".set_style((Color::Yellow, Color::Black)))
+                            .border_set(border::QUADRANT_OUTSIDE)
+                            .border_style((Color::Black, Color::Cyan)),
+                    )
+                    .render(l3, buf);
+            }
         }
 
-        Paragraph::new(vec![Line::from(vec![
+        let instructions_1 = Line::from(vec![
             " Onglets:".into(),
             " Suite/Retour".reversed().into(),
-        ])])
-        .style((Color::Yellow, Color::Blue))
-        .render(instructions_area, buf);
+            " Quitter:".into(),
+            " Cnx/Fin".reversed().into(),
+        ]);
+
+        let instructions_2 = match self.selected_tab {
+            SelectedTab::Calendrier => Line::from(vec![
+                " Mois:".into(),
+                " Correction/Annulation".reversed().into(),
+            ]),
+            _ => Line::default(),
+        };
+
+        Paragraph::new(vec![instructions_1, instructions_2])
+            .style((Color::Yellow, Color::Blue))
+            .render(instructions_area, buf);
         /*Block::default()
         .style((Color::Yellow, Color::Blue))
         .render(instructions_area, buf);*/
@@ -265,6 +318,7 @@ impl SelectedTab {
             SelectedTab::Calendrier => Color::Yellow,
             SelectedTab::Bienvenue => Color::Cyan,
             SelectedTab::World => Color::Magenta,
+            SelectedTab::Borders => Color::Green,
         }
     }
 }
