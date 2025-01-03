@@ -16,7 +16,7 @@ use crate::{
 
 use smallvec::SmallVec;
 use unicode_normalization::UnicodeNormalization;
-use videotex::{Stroke, TouchesFonction};
+use videotex::{Stroke, TouchesFonction, G0};
 
 use std::io::{Error, ErrorKind, Result};
 
@@ -153,12 +153,11 @@ impl<S: MinitelRead> Minitel<S> {
 
     /// Read a key stroke from the minitel assuming it is in S0 (text) mode.
     ///
-    /// G2 sets is not considered, it's instead represented as unicode Char(c).
+    /// G0 and G2 characters are returned as unicode characters.
     pub fn read_s0_stroke(&mut self) -> Result<Stroke> {
         let b = self.read_byte()?;
-        if matches!(b, 0x20..=0x7F) {
-            // ASCII basic
-            return Ok(Stroke::Char(b as char));
+        if let Ok(g0) = G0::try_from(b) {
+            return Ok(Stroke::Char(g0.into()));
         }
         let c0 = C0::try_from(b).map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         match c0 {

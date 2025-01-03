@@ -5,7 +5,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 /// Virtual keystroke sequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Stroke {
-    // A single character, ASCII or G2
+    // A single character, G0 or G2
     Char(char),
     // A single control character
     C0(C0),
@@ -121,6 +121,68 @@ impl IntoSequence<2> for C1 {
     }
 }
 
+pub struct G0(u8);
+
+impl Into<u8> for G0 {
+    fn into(self) -> u8 {
+        self.0
+    }
+}
+
+impl IntoSequence<1> for G0 {
+    fn sequence(self) -> [u8; 1] {
+        [self.0]
+    }
+}
+
+#[rustfmt::skip]
+const G0_TO_CHAR: [char; 95] = [
+    ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
+    '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+    'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '↑', '_',
+    '─', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '▏', '|', '▕', '▔'
+];
+
+impl Into<char> for G0 {
+    fn into(self) -> char {
+        G0_TO_CHAR[self.0 as usize - 0x20]
+    }
+}
+
+impl TryFrom<u8> for G0 {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x20..=0x7E => Ok(G0(value)),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<char> for G0 {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            // Ranges matching ascii
+            '\u{0020}'..='\u{005C}' | '\u{005F}' | '\u{0061}'..'\u{007A}' | '\u{007C}' => {
+                Ok(G0(value as u8))
+            }
+            // Drawing characters
+            '─' => Ok(G0(0x60)),
+            '▁' => Ok(G0(0x5F)),
+            '▏' => Ok(G0(0x7B)),
+            '│' => Ok(G0(0x7C)),
+            '▕' => Ok(G0(0x7D)),
+            '▔' => Ok(G0(0x7E)),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Semi-graphic sextant characters
 ///
 /// https://jbellue.github.io/stum1b/#2-2-1-2-8
@@ -199,12 +261,14 @@ impl G1 {
             '▚' => Some(G1(0x64)),
             '▞' => Some(G1(0x26)),
             '█' => Some(G1(0x7F)),
+            // horizontal bars
             '▉' => Some(G1(0x7F)),
             '▊' => Some(G1(0x7F)),
             '▋' => Some(G1(0x35)),
             '▍' => Some(G1(0x35)),
             '▎' => Some(G1(0x20)),
             '▏' => Some(G1(0x20)),
+            // vertical bars
             '▇' => Some(G1(0x7F)),
             '▆' => Some(G1(0x7C)),
             '▅' => Some(G1(0x7C)),

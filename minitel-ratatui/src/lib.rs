@@ -4,7 +4,7 @@ use ratatui::backend::Backend;
 use ratatui::prelude::*;
 
 use minitel_stum::{
-    videotex::{GrayScale, C0, C1, G1},
+    videotex::{GrayScale, C0, C1, G0, G1, G2},
     Minitel, MinitelRead, MinitelWrite,
 };
 
@@ -16,7 +16,7 @@ pub enum CharKind {
     /// Last char was a normal char
     Alphabet(char),
     /// Last char was a semi-graphic char
-    SemiGraphic(u8),
+    SemiGraphic(G1),
 }
 
 impl CharKind {
@@ -32,10 +32,12 @@ impl CharKind {
 impl From<&str> for CharKind {
     fn from(c: &str) -> Self {
         let c = c.chars().next().unwrap();
-        if let Some(c) = G1::approximate_char(c) {
-            return CharKind::SemiGraphic(c.0);
-        } else {
+        if G0::try_from(c).is_ok() || G2::try_from(c).is_ok() {
             return CharKind::Alphabet(c);
+        } else if let Some(c) = G1::approximate_char(c) {
+            return CharKind::SemiGraphic(c);
+        } else {
+            return CharKind::None;
         }
     }
 }

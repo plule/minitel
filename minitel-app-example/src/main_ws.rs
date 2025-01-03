@@ -11,6 +11,9 @@ fn handle_client(stream: TcpStream) -> Result<()> {
     info!("Running test");
     let socket = accept(stream).map_err(must_not_block)?;
     let minitel = minitel::ws_minitel(socket);
+
+    /*minitel.clear_screen()?;
+    minitel.write_bytes(&[0x2F, 0x5C, 0x5F, 0x60, 0x7B, 0x7C, 0x7D, 0x7E])?;*/
     let mut terminal = minitel::ws_terminal(minitel)?;
 
     let mut app = crate::app::App::default();
