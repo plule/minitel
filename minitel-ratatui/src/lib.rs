@@ -32,10 +32,10 @@ impl CharKind {
 impl From<&str> for CharKind {
     fn from(c: &str) -> Self {
         let c = c.chars().next().unwrap();
-        if G0::try_from(c).is_ok() || G2::try_from(c).is_ok() {
+        if let Some(g1) = G1::approximate_char(c) {
+            return CharKind::SemiGraphic(g1);
+        } else if G0::try_from(c).is_ok() || G2::try_from(c).is_ok() {
             return CharKind::Alphabet(c);
-        } else if let Some(c) = G1::approximate_char(c) {
-            return CharKind::SemiGraphic(c);
         } else {
             return CharKind::None;
         }

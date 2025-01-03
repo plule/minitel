@@ -187,7 +187,7 @@ impl Widget for &App {
             }
             SelectedTab::World => {
                 Canvas::default()
-                    .block(Block::bordered().title("World"))
+                    //.block(Block::bordered().title("World"))
                     //.marker(self.marker)
                     .paint(|ctx| {
                         ctx.draw(&Map {
