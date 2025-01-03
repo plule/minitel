@@ -178,9 +178,7 @@ impl<S: MinitelRead> Minitel<S> {
 
                 if let Some(diacritics) = g2.unicode_diacritic() {
                     // With diacritics, read one more byte for the base char
-                    let char: char = self.read_byte()?.try_into().map_err(|_| {
-                        Error::new(ErrorKind::InvalidData, "Invalid diacritic character")
-                    })?;
+                    let char: char = self.read_byte()?.into();
                     let char = unicode_normalization::char::compose(char, diacritics).ok_or(
                         Error::new(ErrorKind::InvalidData, "Invalid diacritic composition"),
                     )?;

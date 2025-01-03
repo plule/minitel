@@ -4,7 +4,7 @@ use ratatui::backend::Backend;
 use ratatui::prelude::*;
 
 use minitel_stum::{
-    videotex::{GrayScale, SIChar, C0, C1, G0, G1, G2},
+    videotex::{GrayScale, SIChar, C0, C1, G0, G1},
     Minitel, MinitelRead, MinitelWrite,
 };
 

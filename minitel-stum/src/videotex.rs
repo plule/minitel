@@ -168,9 +168,9 @@ impl IntoSequence<2> for C1 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct G0(pub u8);
 
-impl Into<u8> for G0 {
-    fn into(self) -> u8 {
-        self.0
+impl From<G0> for u8 {
+    fn from(val: G0) -> Self {
+        val.0
     }
 }
 
@@ -190,9 +190,9 @@ const G0_TO_CHAR: [char; 95] = [
     'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '▏', '|', '▕', '▔'
 ];
 
-impl Into<char> for G0 {
-    fn into(self) -> char {
-        G0_TO_CHAR[self.0 as usize - 0x20]
+impl From<G0> for char {
+    fn from(val: G0) -> Self {
+        G0_TO_CHAR[val.0 as usize - 0x20]
     }
 }
 
@@ -213,7 +213,7 @@ impl TryFrom<char> for G0 {
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
             // Ranges matching ascii
-            '\u{0020}'..='\u{005C}' | '\u{005F}' | '\u{0061}'..'\u{007A}' | '\u{007C}' => {
+            '\u{0020}'..='\u{005D}' | '\u{005F}' | '\u{0061}'..='\u{007A}' | '\u{007C}' => {
                 Ok(G0(value as u8))
             }
             // Drawing characters
@@ -258,7 +258,7 @@ impl G1 {
 
     /// Convert from the 3 rows of 2 bits into a G1 character
     pub fn from_bits(bits: [[bool; 2]; 3]) -> Self {
-        let val: u8 = (bits[0][0] as u8) << 0
+        let val: u8 = (bits[0][0] as u8)
             | (bits[0][1] as u8) << 1
             | (bits[1][0] as u8) << 2
             | (bits[1][1] as u8) << 3
