@@ -316,9 +316,8 @@ impl<S: MinitelWrite> Minitel<S> {
     }
 
     pub fn write_char(&mut self, c: char) -> Result<()> {
-        // ASCII, skip logic
-        if c.is_ascii() {
-            self.write_byte(c as u8)?;
+        if let Ok(g0) = G0::try_from(c) {
+            self.write_byte(g0)?;
             return Ok(());
         }
 

@@ -4,7 +4,7 @@ use ratatui::backend::Backend;
 use ratatui::prelude::*;
 
 use minitel_stum::{
-    videotex::{GrayScale, C0, C1, G0, G1, G2},
+    videotex::{GrayScale, C0, C1, G1},
     Minitel, MinitelRead, MinitelWrite,
 };
 
@@ -166,6 +166,7 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
                         }
                         self.char_attributes.clone_from(&char_attributes);
                     }
+
                     self.minitel.write_char(c)?;
                 }
                 CharKind::SemiGraphic(c) => {
@@ -235,4 +236,32 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
         self.minitel.flush()?;
         Ok(())
     }
+}
+
+pub mod border {
+    use ratatui::symbols::border;
+
+    /// Variation on ONE_EIGHTH_WIDE offsetting it on the right to allow
+    /// a consistent background transition in videotex mode.
+    pub const ONE_EIGHTH_WIDE_OFFSET: border::Set = border::Set {
+        top_right: "▁",
+        top_left: " ",
+        bottom_right: "▔",
+        bottom_left: " ",
+        vertical_left: "▕",
+        vertical_right: "▕",
+        horizontal_top: "▁",
+        horizontal_bottom: "▔",
+    };
+
+    pub const ONE_EIGHTH_WIDE_BEVEL: border::Set = border::Set {
+        top_right: "\\",
+        top_left: "/",
+        bottom_right: "/",
+        bottom_left: "\\",
+        vertical_left: "▏",
+        vertical_right: "▕",
+        horizontal_top: "▔",
+        horizontal_bottom: "▁",
+    };
 }

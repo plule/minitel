@@ -122,6 +122,10 @@ impl IntoSequence<2> for C1 {
     }
 }
 
+/// G0 characters (nearly ascii)
+///
+/// https://jbellue.github.io/stum1b/#2-2-1-2-8
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct G0(u8);
 
 impl Into<u8> for G0 {
@@ -173,10 +177,9 @@ impl TryFrom<char> for G0 {
                 Ok(G0(value as u8))
             }
             // Drawing characters
-            '─' => Ok(G0(0x60)),
             '▁' => Ok(G0(0x5F)),
+            '─' => Ok(G0(0x60)),
             '▏' => Ok(G0(0x7B)),
-            '│' => Ok(G0(0x7C)),
             '▕' => Ok(G0(0x7D)),
             '▔' => Ok(G0(0x7E)),
             _ => Err(()),
@@ -267,14 +270,14 @@ impl G1 {
             '▋' => Some(G1(0x35)),
             '▍' => Some(G1(0x35)),
             '▎' => Some(G1(0x20)),
-            '▏' => Some(G1(0x20)),
+            //'▏' => Some(G1(0x20)), // clash with G0
             // vertical bars
             '▇' => Some(G1(0x7F)),
             '▆' => Some(G1(0x7C)),
             '▅' => Some(G1(0x7C)),
             '▃' => Some(G1(0x70)),
             '▂' => Some(G1(0x70)),
-            '▁' => Some(G1(0x20)),
+            //'▁' => Some(G1(0x20)), // clash with G0
             _ => None,
         }
     }

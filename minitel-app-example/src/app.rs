@@ -13,7 +13,7 @@ use ratatui::{
     widgets::{
         calendar::{CalendarEventStore, Monthly},
         canvas::{Canvas, Map, MapResolution},
-        Block, Paragraph, Tabs,
+        Block, Padding, Paragraph, Tabs, Wrap,
     },
 };
 use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
@@ -32,6 +32,7 @@ use tui_big_text::{BigText, PixelSize};
 pub struct App {
     selected_tab: SelectedTab,
     date: Date,
+    underline_border: bool,
     exit: bool,
 }
 
@@ -40,6 +41,7 @@ impl Default for App {
         Self {
             selected_tab: SelectedTab::Bienvenue,
             date: Date::from_calendar_date(2025, Month::January, 15).unwrap(),
+            underline_border: false,
             exit: false,
         }
     }
@@ -54,9 +56,7 @@ impl App {
         log::info!("Running App");
         terminal.clear()?;
 
-        log::info!("Running the event loop");
         let loop_result = self.event_loop(terminal);
-        log::info!("Event loop ended");
         if let Err(err) = loop_result {
             log::error!("Error in event loop: {:?}", err);
         }
@@ -69,11 +69,8 @@ impl App {
         &mut self,
         terminal: &mut Terminal<MinitelBackend<B>>,
     ) -> io::Result<()> {
-        log::info!("Entering event loop");
         while !self.exit {
-            log::info!("Drawing frame");
             terminal.draw(|frame| self.draw(frame))?;
-            log::info!("Handling events");
             self.handle_events(&mut terminal.backend_mut().minitel)?;
         }
         Ok(())
@@ -88,7 +85,6 @@ impl App {
         minitel: &mut Minitel<B>,
     ) -> io::Result<()> {
         if let Ok(b) = minitel.read_s0_stroke() {
-            log::info!("Received strocke {:?}", b);
             match b {
                 Stroke::Fonction(TouchesFonction::Suite) => {
                     self.selected_tab = self.selected_tab.next()
@@ -96,7 +92,7 @@ impl App {
                 Stroke::Fonction(TouchesFonction::Retour) => {
                     self.selected_tab = self.selected_tab.previous()
                 }
-                Stroke::Fonction(TouchesFonction::ConnexionFin) => self.exit = true,
+                Stroke::Fonction(TouchesFonction::Sommaire) => self.exit = true,
                 _ => match self.selected_tab {
                     SelectedTab::Calendrier => match b {
                         Stroke::Fonction(TouchesFonction::Correction) => {
@@ -106,6 +102,12 @@ impl App {
                         Stroke::Fonction(TouchesFonction::Annulation) => {
                             self.date = self.date.saturating_sub(Duration::days(20));
                             self.date = self.date.replace_day(15).unwrap();
+                        }
+                        _ => {}
+                    },
+                    SelectedTab::Borders => match b {
+                        Stroke::Fonction(TouchesFonction::Envoi) => {
+                            self.underline_border = !self.underline_border;
                         }
                         _ => {}
                     },
@@ -203,46 +205,79 @@ impl Widget for &App {
                     .x_bounds([-180.0, 180.0])
                     .y_bounds([-90.0, 90.0])
                     .render(main_area, buf);
+                //buf.set_style(main_area, Style::default().underlined());
             }
             SelectedTab::Borders => {
-                let [l1, l2, l3] = Layout::vertical([
-                    Constraint::Fill(1),
-                    Constraint::Fill(1),
-                    Constraint::Fill(1),
+                let [h1, h2] =
+                    Layout::horizontal([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
+                        .spacing(1)
+                        .margin(1)
+                        .areas(main_area);
+                let [l11, l12, l13] = Layout::vertical([
+                    Constraint::Ratio(1, 3),
+                    Constraint::Ratio(1, 3),
+                    Constraint::Ratio(1, 3),
                 ])
                 .spacing(1)
-                .margin(1)
-                .areas(main_area);
-                Paragraph::new(" Bordure pleine ")
-                    .centered()
-                    .style((Color::Blue, Color::Cyan))
-                    .block(
-                        Block::bordered()
-                            .title(" Full ".set_style((Color::Yellow, Color::Black)))
-                            .border_set(border::FULL)
-                            .border_style((Color::Black, Color::Green)),
-                    )
-                    .render(l1, buf);
-                Paragraph::new(" Quadrants intérieur ")
-                    .centered()
-                    .style((Color::Blue, Color::Cyan))
-                    .block(
-                        Block::bordered()
-                            .title(" Quadrants Inside ".set_style((Color::Yellow, Color::Black)))
-                            .border_set(border::QUADRANT_INSIDE)
-                            .border_style((Color::Black, Color::Green)),
-                    )
-                    .render(l2, buf);
-                Paragraph::new(" Quadrants extérieur ")
-                    .centered()
-                    .style((Color::Blue, Color::Cyan))
-                    .block(
-                        Block::bordered()
-                            .title(" Quadrants Outside ".set_style((Color::Yellow, Color::Black)))
-                            .border_set(border::QUADRANT_OUTSIDE)
-                            .border_style((Color::Black, Color::Cyan)),
-                    )
-                    .render(l3, buf);
+                .areas(h1);
+
+                let [l21, l22, l23] = Layout::vertical([
+                    Constraint::Ratio(1, 3),
+                    Constraint::Ratio(1, 3),
+                    Constraint::Ratio(1, 3),
+                ])
+                .spacing(1)
+                .areas(h2);
+
+                let mut border_style = Style::default();
+                if self.underline_border {
+                    border_style = border_style.underlined();
+                }
+                border_demo(
+                    " Full ",
+                    "Bordure pleine",
+                    border::FULL,
+                    border_style.set_style((Color::Black, Color::Green)),
+                )
+                .render(l11, buf);
+                border_demo(
+                    " Quad Inside ",
+                    "Quadrants intérieur",
+                    border::QUADRANT_INSIDE,
+                    border_style.set_style((Color::Black, Color::Green)),
+                )
+                .render(l12, buf);
+                border_demo(
+                    " Quad Outside ",
+                    "Quadrants extérieur",
+                    border::QUADRANT_OUTSIDE,
+                    border_style.set_style((Color::Black, Color::Cyan)),
+                )
+                .render(l13, buf);
+
+                border_demo(
+                    " 8th Width ",
+                    "Largeur 1/8",
+                    border::ONE_EIGHTH_WIDE,
+                    border_style.set_style((Color::Black, Color::Green)),
+                )
+                .render(l21, buf);
+
+                border_demo(
+                    " 8th Width bis ",
+                    "Largeur 1/8 décalée",
+                    minitel::ratatui::border::ONE_EIGHTH_WIDE_OFFSET,
+                    border_style.set_style((Color::Black, Color::Green)),
+                )
+                .render(l22, buf);
+
+                border_demo(
+                    " beveled ",
+                    "Largeur 1/8 biseautée",
+                    minitel::ratatui::border::ONE_EIGHTH_WIDE_BEVEL,
+                    border_style.set_style((Color::Black, Color::Green)),
+                )
+                .render(l23, buf);
             }
         }
 
@@ -250,7 +285,7 @@ impl Widget for &App {
             " Onglets:".into(),
             " Suite/Retour".reversed().into(),
             " Quitter:".into(),
-            " Cnx/Fin".reversed().into(),
+            " Sommaire".reversed().into(),
         ]);
 
         let instructions_2 = match self.selected_tab {
@@ -258,16 +293,35 @@ impl Widget for &App {
                 " Mois:".into(),
                 " Correction/Annulation".reversed().into(),
             ]),
+            SelectedTab::Borders => {
+                Line::from(vec![" Joint/Disjoint:".into(), " Envoi".reversed().into()])
+            }
             _ => Line::default(),
         };
 
         Paragraph::new(vec![instructions_1, instructions_2])
             .style((Color::Yellow, Color::Blue))
             .render(instructions_area, buf);
-        /*Block::default()
-        .style((Color::Yellow, Color::Blue))
-        .render(instructions_area, buf);*/
     }
+}
+
+fn border_demo<'a>(
+    name: &'a str,
+    content: &'a str,
+    border_set: border::Set,
+    border_style: Style,
+) -> Paragraph<'a> {
+    let block = Block::bordered()
+        .border_set(border_set)
+        .border_style(border_style)
+        .title_alignment(Alignment::Right)
+        .title(name.set_style((Color::Yellow, Color::Black)))
+        .padding(Padding::left(1));
+
+    Paragraph::new(content)
+        .style((Color::Blue, Color::Cyan))
+        .wrap(Wrap { trim: false })
+        .block(block)
 }
 
 fn calendrier_title(date: Date) -> Line<'static> {
