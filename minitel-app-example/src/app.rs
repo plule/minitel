@@ -1,15 +1,19 @@
+//! Application logic for the Minitel app example.
+
 use std::io;
 
-use layout::Flex;
 use minitel::{
     stum::{
-        videotex::{Stroke, TouchesFonction},
+        videotex::{FunctionKey, UserInput},
         Minitel, MinitelRead, MinitelWrite,
     },
     MinitelBackend,
 };
 use ratatui::{
+    layout::Flex,
     prelude::*,
+    style::Styled,
+    symbols::border,
     widgets::{
         calendar::{CalendarEventStore, Monthly},
         canvas::{Canvas, Map, MapResolution},
@@ -17,17 +21,10 @@ use ratatui::{
     },
 };
 use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
-use style::Styled;
-use symbols::{
-    block,
-    border::{
-        self, QUADRANT_BOTTOM_HALF, QUADRANT_LEFT_HALF, QUADRANT_RIGHT_HALF,
-        QUADRANT_TOP_LEFT_BOTTOM_LEFT_BOTTOM_RIGHT, QUADRANT_TOP_RIGHT_BOTTOM_LEFT_BOTTOM_RIGHT,
-    },
-};
 use time::{Date, Duration, Month};
 use tui_big_text::{BigText, PixelSize};
 
+/// Application state
 #[derive(Debug)]
 pub struct App {
     selected_tab: SelectedTab,
@@ -86,27 +83,27 @@ impl App {
     ) -> io::Result<()> {
         if let Ok(b) = minitel.read_s0_stroke() {
             match b {
-                Stroke::Fonction(TouchesFonction::Suite) => {
+                UserInput::FunctionKey(FunctionKey::Suite) => {
                     self.selected_tab = self.selected_tab.next()
                 }
-                Stroke::Fonction(TouchesFonction::Retour) => {
+                UserInput::FunctionKey(FunctionKey::Retour) => {
                     self.selected_tab = self.selected_tab.previous()
                 }
-                Stroke::Fonction(TouchesFonction::Sommaire) => self.exit = true,
+                UserInput::FunctionKey(FunctionKey::Sommaire) => self.exit = true,
                 _ => match self.selected_tab {
                     SelectedTab::Calendrier => match b {
-                        Stroke::Fonction(TouchesFonction::Correction) => {
+                        UserInput::FunctionKey(FunctionKey::Correction) => {
                             self.date = self.date.saturating_add(Duration::days(20));
                             self.date = self.date.replace_day(15).unwrap();
                         }
-                        Stroke::Fonction(TouchesFonction::Annulation) => {
+                        UserInput::FunctionKey(FunctionKey::Annulation) => {
                             self.date = self.date.saturating_sub(Duration::days(20));
                             self.date = self.date.replace_day(15).unwrap();
                         }
                         _ => {}
                     },
                     SelectedTab::Borders | SelectedTab::World => match b {
-                        Stroke::Fonction(TouchesFonction::Envoi) => {
+                        UserInput::FunctionKey(FunctionKey::Envoi) => {
                             self.demo_disjoint = !self.demo_disjoint;
                         }
                         _ => {}
@@ -133,6 +130,7 @@ enum SelectedTab {
 }
 
 impl Widget for &App {
+    /// Draw the application to the ratatui buffer
     fn render(self, area: Rect, buf: &mut Buffer) {
         let [title_area, tabs_area, main_area, instructions_area] = Layout::vertical([
             Constraint::Length(1),
@@ -147,6 +145,29 @@ impl Widget for &App {
             .alignment(Alignment::Center)
             .render(title_area, buf);
 
+        self.draw_tabs(buf, tabs_area, main_area);
+
+        match self.selected_tab {
+            SelectedTab::Bienvenue => {
+                self.draw_welcome(buf, main_area);
+            }
+            SelectedTab::Calendrier => {
+                self.draw_calendar(buf, main_area);
+            }
+            SelectedTab::World => {
+                self.draw_world(buf, main_area);
+            }
+            SelectedTab::Borders => {
+                self.draw_border_demo(buf, main_area);
+            }
+        }
+
+        self.draw_instructions(buf, instructions_area);
+    }
+}
+
+impl App {
+    fn draw_tabs(&self, buf: &mut Buffer, tabs_area: Rect, main_area: Rect) {
         let titles = SelectedTab::iter().map(SelectedTab::title);
         let selected_tab_index = self.selected_tab as usize;
         Tabs::new(titles)
@@ -159,131 +180,133 @@ impl Widget for &App {
         Block::default()
             .bg(self.selected_tab.color())
             .render(main_area, buf);
+    }
 
-        match self.selected_tab {
-            SelectedTab::Calendrier => {
-                let calendar_area =
-                    center(main_area, Constraint::Length(24), Constraint::Length(9));
-                let calendar_block = Block::bordered()
-                    .border_set(QUADRANT_OUTSIDE_TOP_FULL)
-                    .title(calendrier_title(self.date))
-                    .title_alignment(Alignment::Center)
-                    .style((Color::Blue, Color::White));
-                let [weekdays_area, days_area] =
-                    Layout::vertical([Constraint::Length(1), Constraint::Fill(1)])
-                        .areas(calendar_block.inner(calendar_area));
-                calendar_block.render(calendar_area, buf);
-                Paragraph::new(" Di Lun Mar Mer Je Ve Sa ".fg(Color::Magenta).underlined())
-                    .render(weekdays_area, buf);
-                Monthly::new(self.date, CalendarEventStore::default())
-                    .show_surrounding(Style::default().fg(Color::Cyan))
-                    .render(days_area, buf);
-            }
-            SelectedTab::Bienvenue => {
-                let big_text_area = vcenter(main_area, Constraint::Length(10));
-                BigText::builder()
-                    .pixel_size(PixelSize::Sextant)
-                    .style(Style::default().set_style((Color::Blue, self.selected_tab.color())))
-                    .lines(vec![
-                        "Bienvenue".slow_blink().into(),
-                        "dans le".into(),
-                        "Minitel !".underlined().crossed_out().into(),
-                    ])
-                    .centered()
-                    .build()
-                    .render(big_text_area, buf);
-            }
-            SelectedTab::World => {
-                Canvas::default()
-                    .paint(|ctx| {
-                        ctx.draw(&Map {
-                            color: Color::Green,
-                            resolution: MapResolution::High,
-                        });
-                    })
-                    .background_color(self.selected_tab.color())
-                    .x_bounds([-180.0, 180.0])
-                    .y_bounds([-90.0, 90.0])
-                    .render(main_area, buf);
-                buf.set_style(main_area, Style::default().crossed_out()); // Force semi-graphic mode
-                if self.demo_disjoint {
-                    buf.set_style(main_area, Style::default().underlined());
-                }
-            }
-            SelectedTab::Borders => {
-                let [h1, h2] =
-                    Layout::horizontal([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
-                        .spacing(1)
-                        .margin(1)
-                        .areas(main_area);
-                let [l11, l12, l13] = Layout::vertical([
-                    Constraint::Ratio(1, 3),
-                    Constraint::Ratio(1, 3),
-                    Constraint::Ratio(1, 3),
-                ])
-                .spacing(1)
-                .areas(h1);
+    fn draw_welcome(&self, buf: &mut Buffer, main_area: Rect) {
+        let big_text_area = vcenter(main_area, Constraint::Length(10));
+        BigText::builder()
+            .pixel_size(PixelSize::Sextant)
+            .style(Style::default().set_style((Color::Blue, self.selected_tab.color())))
+            .lines(vec![
+                "Bienvenue".slow_blink().into(),
+                "dans le".into(),
+                "Minitel !".underlined().crossed_out().into(),
+            ])
+            .centered()
+            .build()
+            .render(big_text_area, buf);
+    }
 
-                let [l21, l22, l23] = Layout::vertical([
-                    Constraint::Ratio(1, 3),
-                    Constraint::Ratio(1, 3),
-                    Constraint::Ratio(1, 3),
-                ])
-                .spacing(1)
-                .areas(h2);
+    fn draw_calendar(&self, buf: &mut Buffer, main_area: Rect) {
+        let calendar_area = center(main_area, Constraint::Length(24), Constraint::Length(9));
+        let calendar_block = Block::bordered()
+            .border_set(QUADRANT_OUTSIDE_TOP_FULL)
+            .title(calendrier_title(self.date))
+            .title_alignment(Alignment::Center)
+            .style((Color::Blue, Color::White));
+        let [weekdays_area, days_area] =
+            Layout::vertical([Constraint::Length(1), Constraint::Fill(1)])
+                .areas(calendar_block.inner(calendar_area));
+        calendar_block.render(calendar_area, buf);
+        Paragraph::new(" Di Lun Mar Mer Je Ve Sa ".fg(Color::Magenta).underlined())
+            .render(weekdays_area, buf);
+        Monthly::new(self.date, CalendarEventStore::default())
+            .show_surrounding(Style::default().fg(Color::Cyan))
+            .render(days_area, buf);
+    }
 
-                let mut border_style = Style::default();
-                if self.demo_disjoint {
-                    border_style = border_style.underlined();
-                }
-                border_demo(
-                    " Full ",
-                    "Bordure pleine",
-                    border::FULL,
-                    border_style.set_style((Color::Black, Color::Green)),
-                )
-                .render(l11, buf);
-                border_demo(
-                    " Quad Inside ",
-                    "Quadrants intérieur",
-                    border::QUADRANT_INSIDE,
-                    border_style.set_style((Color::Black, Color::Green)),
-                )
-                .render(l12, buf);
-                border_demo(
-                    " Quad Outside ",
-                    "Quadrants extérieur",
-                    border::QUADRANT_OUTSIDE,
-                    border_style.set_style((Color::Black, Color::Cyan)),
-                )
-                .render(l13, buf);
-
-                border_demo(
-                    " 8th Width ",
-                    "Largeur 1/8",
-                    border::ONE_EIGHTH_WIDE,
-                    border_style.set_style((Color::Black, Color::Green)),
-                )
-                .render(l21, buf);
-
-                border_demo(
-                    " 8th Width bis ",
-                    "Largeur 1/8 décalée",
-                    minitel::ratatui::border::ONE_EIGHTH_WIDE_OFFSET,
-                    border_style.set_style((Color::Black, Color::Green)),
-                )
-                .render(l22, buf);
-
-                border_demo(
-                    " beveled ",
-                    "Largeur 1/8 biseautée",
-                    minitel::ratatui::border::ONE_EIGHTH_WIDE_BEVEL,
-                    border_style.set_style((Color::Black, Color::Green)),
-                )
-                .render(l23, buf);
-            }
+    fn draw_world(&self, buf: &mut Buffer, main_area: Rect) {
+        Canvas::default()
+            .paint(|ctx| {
+                ctx.draw(&Map {
+                    color: Color::Green,
+                    resolution: MapResolution::High,
+                });
+            })
+            .background_color(self.selected_tab.color())
+            .x_bounds([-180.0, 180.0])
+            .y_bounds([-90.0, 90.0])
+            .render(main_area, buf);
+        buf.set_style(main_area, Style::default().crossed_out());
+        // Force semi-graphic mode
+        if self.demo_disjoint {
+            buf.set_style(main_area, Style::default().underlined());
         }
+    }
 
+    fn draw_border_demo(&self, buf: &mut Buffer, main_area: Rect) {
+        let [h1, h2] = Layout::horizontal([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
+            .spacing(1)
+            .margin(1)
+            .areas(main_area);
+        let [l11, l12, l13] = Layout::vertical([
+            Constraint::Ratio(1, 3),
+            Constraint::Ratio(1, 3),
+            Constraint::Ratio(1, 3),
+        ])
+        .spacing(1)
+        .areas(h1);
+
+        let [l21, l22, l23] = Layout::vertical([
+            Constraint::Ratio(1, 3),
+            Constraint::Ratio(1, 3),
+            Constraint::Ratio(1, 3),
+        ])
+        .spacing(1)
+        .areas(h2);
+
+        let mut border_style = Style::default();
+        if self.demo_disjoint {
+            border_style = border_style.underlined();
+        }
+        border_demo(
+            " Full ",
+            "Bordure pleine",
+            border::FULL,
+            border_style.set_style((Color::Black, Color::Green)),
+        )
+        .render(l11, buf);
+        border_demo(
+            " Quad Inside ",
+            "Quadrants intérieur",
+            border::QUADRANT_INSIDE,
+            border_style.set_style((Color::Black, Color::Green)),
+        )
+        .render(l12, buf);
+        border_demo(
+            " Quad Outside ",
+            "Quadrants extérieur",
+            border::QUADRANT_OUTSIDE,
+            border_style.set_style((Color::Black, Color::Cyan)),
+        )
+        .render(l13, buf);
+
+        border_demo(
+            " 8th Width ",
+            "Largeur 1/8",
+            border::ONE_EIGHTH_WIDE,
+            border_style.set_style((Color::Black, Color::Green)),
+        )
+        .render(l21, buf);
+
+        border_demo(
+            " 8th Width bis ",
+            "Largeur 1/8 décalée",
+            minitel::ratatui::border::ONE_EIGHTH_WIDE_OFFSET,
+            border_style.set_style((Color::Black, Color::Green)),
+        )
+        .render(l22, buf);
+
+        border_demo(
+            " beveled ",
+            "Largeur 1/8 biseautée",
+            minitel::ratatui::border::ONE_EIGHTH_WIDE_BEVEL,
+            border_style.set_style((Color::Black, Color::Green)),
+        )
+        .render(l23, buf);
+    }
+
+    fn draw_instructions(&self, buf: &mut Buffer, instructions_area: Rect) {
         let instructions_1 = Line::from(vec![
             " Onglets:".into(),
             " Suite/Retour".reversed().into(),
@@ -394,12 +417,12 @@ fn vcenter(area: Rect, vertical: Constraint) -> Rect {
 }
 
 pub const QUADRANT_OUTSIDE_TOP_FULL: border::Set = border::Set {
-    top_right: block::FULL,
-    top_left: block::FULL,
-    bottom_left: QUADRANT_TOP_LEFT_BOTTOM_LEFT_BOTTOM_RIGHT,
-    bottom_right: QUADRANT_TOP_RIGHT_BOTTOM_LEFT_BOTTOM_RIGHT,
-    vertical_left: QUADRANT_LEFT_HALF,
-    vertical_right: QUADRANT_RIGHT_HALF,
-    horizontal_top: block::FULL,
-    horizontal_bottom: QUADRANT_BOTTOM_HALF,
+    top_right: "█",
+    top_left: "█",
+    bottom_left: "▙",
+    bottom_right: "▟",
+    vertical_left: "▌",
+    vertical_right: "▐",
+    horizontal_top: "█",
+    horizontal_bottom: "▄",
 };

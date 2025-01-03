@@ -5,52 +5,15 @@ use unicode_normalization::UnicodeNormalization;
 
 /// Virtual keystroke sequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Stroke {
-    // A single character, G0 or G2
+pub enum UserInput {
+    /// A single character, G0 or G2
     Char(char),
-    // A single control character
+    /// A single control character
     C0(C0),
-    // ESC C1 control character
+    /// ESC C1 control character
     C1(C1),
-    Fonction(TouchesFonction),
-}
-
-/// Normal characters ("code")
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SIChar {
-    /// Basic character, nearly ascii
-    G0(G0),
-    /// Accentuated character
-    G0Diacritic(G0, G2),
-    /// Special character ($, £, ...)
-    G2(G2),
-}
-
-impl TryFrom<char> for SIChar {
-    type Error = ();
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        // Check for basic characters
-        if let Ok(g0) = G0::try_from(value) {
-            return Ok(SIChar::G0(g0));
-        }
-
-        // Check for special characters
-        if let Ok(g2) = G2::try_from(value) {
-            return Ok(SIChar::G2(g2));
-        }
-
-        // Diacritics
-        let parts: SmallVec<[char; 2]> = value.nfd().take(2).collect();
-        if let (Some(base), Some(diacritic)) = (parts.get(0), parts.get(1)) {
-            if let (Ok(g0), Some(diacritic)) =
-                (G0::try_from(*base), G2::try_from_diactric(*diacritic))
-            {
-                return Ok(SIChar::G0Diacritic(g0, diacritic));
-            }
-        }
-        Err(())
-    }
+    /// One of the function keys
+    FunctionKey(FunctionKey),
 }
 
 /// Base control characters
@@ -257,6 +220,9 @@ impl G1 {
     }
 
     /// Convert from the 3 rows of 2 bits into a G1 character
+    /// [[1, 2],
+    /// [3, 4],
+    /// [5, 6]]
     pub fn from_bits(bits: [[bool; 2]; 3]) -> Self {
         let val: u8 = (bits[0][0] as u8)
             | (bits[0][1] as u8) << 1
@@ -311,14 +277,14 @@ impl G1 {
             '▋' => Some(G1(0x35)),
             '▍' => Some(G1(0x35)),
             '▎' => Some(G1(0x20)),
-            //'▏' => Some(G1(0x20)), // clash with G0
+            '▏' => Some(G1(0x20)),
             // vertical bars
             '▇' => Some(G1(0x7F)),
             '▆' => Some(G1(0x7C)),
             '▅' => Some(G1(0x7C)),
             '▃' => Some(G1(0x70)),
             '▂' => Some(G1(0x70)),
-            //'▁' => Some(G1(0x20)), // clash with G0
+            '▁' => Some(G1(0x20)),
             _ => None,
         }
     }
@@ -441,12 +407,50 @@ impl TryFrom<char> for G2 {
     }
 }
 
+/// Normal characters ("code")
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SIChar {
+    /// Basic character, nearly ascii
+    G0(G0),
+    /// Accentuated character
+    G0Diacritic(G0, G2),
+    /// Special character ($, £, ...)
+    G2(G2),
+}
+
+impl TryFrom<char> for SIChar {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        // Check for basic characters
+        if let Ok(g0) = G0::try_from(value) {
+            return Ok(SIChar::G0(g0));
+        }
+
+        // Check for special characters
+        if let Ok(g2) = G2::try_from(value) {
+            return Ok(SIChar::G2(g2));
+        }
+
+        // Diacritics
+        let parts: SmallVec<[char; 2]> = value.nfd().take(2).collect();
+        if let (Some(base), Some(diacritic)) = (parts.get(0), parts.get(1)) {
+            if let (Ok(g0), Some(diacritic)) =
+                (G0::try_from(*base), G2::try_from_diactric(*diacritic))
+            {
+                return Ok(SIChar::G0Diacritic(g0, diacritic));
+            }
+        }
+        Err(())
+    }
+}
+
 /// Function keys, preceeded with C0::SEP
 ///
 /// https://jbellue.github.io/stum1b/#2-3-6
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
-pub enum TouchesFonction {
+pub enum FunctionKey {
     Envoi = 0x41,
     Retour = 0x42,
     Repetition = 0x43,
@@ -458,7 +462,7 @@ pub enum TouchesFonction {
     ConnexionFin = 0x49,
 }
 
-impl IntoSequence<2> for TouchesFonction {
+impl IntoSequence<2> for FunctionKey {
     fn sequence(self) -> [u8; 2] {
         [C0::Sep.into(), self.into()]
     }

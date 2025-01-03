@@ -1,5 +1,5 @@
 use log::*;
-use minitel::stum::videotex::{TouchesFonction, C0};
+use minitel::stum::videotex::{FunctionKey, C0};
 use ratatui::{
     prelude::*,
     widgets::{Block, Paragraph},
@@ -38,11 +38,11 @@ impl App {
 
     fn handle_events(&mut self, minitel: &mut minitel::WSMinitel) -> io::Result<()> {
         if let Ok(C0::Sep) = C0::try_from(minitel.read_byte()?) {
-            if let Ok(touche_fonction) = TouchesFonction::try_from(minitel.read_byte()?) {
+            if let Ok(touche_fonction) = FunctionKey::try_from(minitel.read_byte()?) {
                 match touche_fonction {
-                    TouchesFonction::Suite => self.counter = self.counter.saturating_add(1),
-                    TouchesFonction::Retour => self.counter = self.counter.saturating_sub(1),
-                    TouchesFonction::ConnexionFin => self.exit = true,
+                    FunctionKey::Suite => self.counter = self.counter.saturating_add(1),
+                    FunctionKey::Retour => self.counter = self.counter.saturating_sub(1),
+                    FunctionKey::ConnexionFin => self.exit = true,
                     _ => {}
                 }
             }

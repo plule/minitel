@@ -14,7 +14,7 @@ use crate::{
     videotex::{C0, C1, G2},
 };
 
-use videotex::{SIChar, Stroke, TouchesFonction, G0};
+use videotex::{FunctionKey, SIChar, UserInput, G0};
 
 use std::io::{Error, ErrorKind, Result};
 
@@ -34,11 +34,13 @@ where
     }
 }
 
+/// Ability to read from a minitel
 pub trait MinitelRead {
     /// Read a sequence of bytes from the minitel, blocking
     fn read(&mut self, data: &mut [u8]) -> Result<()>;
 }
 
+/// Ability to write to a minitel
 pub trait MinitelWrite {
     /// Send a sequence of bytes to the minitel
     fn send(&mut self, data: &[u8]) -> Result<()>;
@@ -46,11 +48,13 @@ pub trait MinitelWrite {
     fn flush(&mut self) -> Result<()>;
 }
 
+/// Ability to change the baudrate of the serial port
 pub trait MinitelBaudrateControl {
     /// Change the baudrate of the serial port
     fn set_baudrate(&mut self, baudrate: Baudrate) -> Result<()>;
 }
 
+/// Minitel terminal
 pub struct Minitel<S> {
     pub port: S,
 }
@@ -79,7 +83,7 @@ impl<S: MinitelRead + MinitelWrite> Minitel<S> {
 
     #[inline(always)]
     pub fn get_pos(&mut self) -> Result<(u8, u8)> {
-        self.write_c1(C1::EnqCursor)?;
+        self.c1(C1::EnqCursor)?;
         self.wait_for(C0::US)?;
         let mut position = [0; 2];
         self.read_bytes(&mut position)?;
@@ -152,10 +156,10 @@ impl<S: MinitelRead> Minitel<S> {
     /// Read a key stroke from the minitel assuming it is in S0 (text) mode.
     ///
     /// G0 and G2 characters are returned as unicode characters.
-    pub fn read_s0_stroke(&mut self) -> Result<Stroke> {
+    pub fn read_s0_stroke(&mut self) -> Result<UserInput> {
         let b = self.read_byte()?;
         if let Ok(g0) = G0::try_from(b) {
-            return Ok(Stroke::Char(g0.into()));
+            return Ok(UserInput::Char(g0.into()));
         }
         let c0 = C0::try_from(b).map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
         match c0 {
@@ -163,13 +167,13 @@ impl<S: MinitelRead> Minitel<S> {
                 // ESC code, C1 special char
                 let c1 = C1::try_from(self.read_byte()?)
                     .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
-                Ok(Stroke::C1(c1))
+                Ok(UserInput::C1(c1))
             }
             C0::Sep => {
                 // SEP code, function key
-                let fct = TouchesFonction::try_from(self.read_byte()?)
+                let fct = FunctionKey::try_from(self.read_byte()?)
                     .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
-                Ok(Stroke::Fonction(fct))
+                Ok(UserInput::FunctionKey(fct))
             }
             C0::SS2 => {
                 // SS2 code, G2 char, returned as unicode char
@@ -182,13 +186,13 @@ impl<S: MinitelRead> Minitel<S> {
                     let char = unicode_normalization::char::compose(char, diacritics).ok_or(
                         Error::new(ErrorKind::InvalidData, "Invalid diacritic composition"),
                     )?;
-                    Ok(Stroke::Char(char))
+                    Ok(UserInput::Char(char))
                 } else {
                     // Without diacritic, return the char directly
-                    Ok(Stroke::Char(g2.char()))
+                    Ok(UserInput::Char(g2.char()))
                 }
             }
-            _ => Ok(Stroke::C0(c0)),
+            _ => Ok(UserInput::C0(c0)),
         }
     }
 
@@ -253,7 +257,7 @@ impl<S: MinitelWrite> Minitel<S> {
     }
 
     #[inline(always)]
-    pub fn write_c1(&mut self, c1: C1) -> Result<()> {
+    pub fn c1(&mut self, c1: C1) -> Result<()> {
         self.write_sequence(c1)
     }
 
@@ -274,7 +278,7 @@ impl<S: MinitelWrite> Minitel<S> {
 
     #[inline(always)]
     pub fn set_pos(&mut self, x: u8, y: u8) -> Result<()> {
-        self.write_bytes(&[C0::US.into(), 0x40 + y, 0x40 + x + 1]) // allow access to y 0, not x 0// allow access to y 0, not x 0
+        self.write_bytes(&[C0::US.into(), 0x40 + y, 0x40 + x + 1]) // allow access to y 0, not x 0
     }
 
     #[inline(always)]
@@ -300,7 +304,7 @@ impl<S: MinitelWrite> Minitel<S> {
     #[inline(always)]
     pub fn start_zone(&mut self, funcs: &[C1]) -> Result<()> {
         for func in funcs {
-            self.write_c1(*func)?;
+            self.c1(*func)?;
         }
         self.zone_delimiter()?;
         Ok(())
@@ -435,30 +439,30 @@ mod tests {
     pub fn read_stroke() {
         let seq: Vec<_> = "He?! ".bytes().collect();
         let mut minitel = Minitel::new(std::io::Cursor::new(seq));
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('H'));
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('e'));
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('?'));
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('!'));
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char(' '));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::Char('H'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::Char('e'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::Char('?'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::Char('!'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::Char(' '));
 
         let seq: Vec<_> = vec![0x20, 0x13, 0x41, 0x13, 0x49, 0x20, 0x1B, 0x54];
         let mut minitel = Minitel::new(std::io::Cursor::new(seq));
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char(' '));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::Char(' '));
         assert_eq!(
             minitel.read_s0_stroke().unwrap(),
-            Stroke::Fonction(TouchesFonction::Envoi)
+            UserInput::FunctionKey(FunctionKey::Envoi)
         );
         assert_eq!(
             minitel.read_s0_stroke().unwrap(),
-            Stroke::Fonction(TouchesFonction::ConnexionFin)
+            UserInput::FunctionKey(FunctionKey::ConnexionFin)
         );
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char(' '));
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::C1(C1::BgBlue));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::Char(' '));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::C1(C1::BgBlue));
 
         let seq: Vec<_> = vec![0x19, 0x42, 0x65, 0x19, 0x3D]; // SS2, ', e, SS2, ½
         let mut minitel = Minitel::new(std::io::Cursor::new(seq));
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('é'));
-        assert_eq!(minitel.read_s0_stroke().unwrap(), Stroke::Char('½'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::Char('é'));
+        assert_eq!(minitel.read_s0_stroke().unwrap(), UserInput::Char('½'));
     }
 
     #[test]

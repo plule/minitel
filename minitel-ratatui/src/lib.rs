@@ -159,7 +159,7 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
                     // Empty char, update the zone attributes if necessary
                     if self.zone_attributes != zone_attributes {
                         for attr in &zone_attributes {
-                            self.minitel.write_c1(*attr)?;
+                            self.minitel.c1(*attr)?;
                         }
                         self.zone_attributes.clone_from(&zone_attributes);
                     }
@@ -169,7 +169,7 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
                     // Alphabetic char, update the char attributes if necessary
                     if self.char_attributes != char_attributes {
                         for attr in &char_attributes {
-                            self.minitel.write_c1(*attr)?;
+                            self.minitel.c1(*attr)?;
                         }
                         self.char_attributes.clone_from(&char_attributes);
                     }
@@ -180,13 +180,13 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
                     // Semigraphic char, update both the zone and char attributes if necessary
                     if self.zone_attributes != zone_attributes {
                         for attr in &zone_attributes {
-                            self.minitel.write_c1(*attr)?;
+                            self.minitel.c1(*attr)?;
                         }
                         self.zone_attributes.clone_from(&zone_attributes);
                     }
                     if self.char_attributes != char_attributes {
                         for attr in &char_attributes {
-                            self.minitel.write_c1(*attr)?;
+                            self.minitel.c1(*attr)?;
                         }
                         self.char_attributes.clone_from(&char_attributes);
                     }
