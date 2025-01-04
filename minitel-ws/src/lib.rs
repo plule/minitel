@@ -6,8 +6,10 @@ use minitel_stum::{MinitelRead, MinitelWrite};
 use std::io::{ErrorKind, Result};
 use tungstenite::{Utf8Bytes, WebSocket};
 
+/// Minitel terminal used over a websocket connection
 pub type WSMinitel = Minitel<WSPort<TcpStream>>;
 
+/// Build a Minitel terminal over a websocket connection
 pub fn ws_minitel(socket: WebSocket<TcpStream>) -> WSMinitel {
     WSMinitel::new(WSPort::new(socket))
 }

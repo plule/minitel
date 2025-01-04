@@ -1,7 +1,7 @@
 //! Spéfications Techniques d'Utilisation du Minitel
 //!
 //! This module defines the general constants extracted from the STUM1B specification.
-//! Reference: https://jbellue.github.io/stum1b/
+//! Reference: <https://jbellue.github.io/stum1b/>
 
 pub mod protocol;
 pub mod videotex;
@@ -54,7 +54,14 @@ pub trait MinitelBaudrateControl {
     fn set_baudrate(&mut self, baudrate: Baudrate) -> Result<()>;
 }
 
-/// Minitel terminal
+/// Minitel interface, the entry point to the library
+///
+/// This struct wraps a serial port (websocket, physical, file, ...) and provides
+/// methods to interact with the device.
+///
+/// This struct can be initialized using the `ws_minitel`, `esp_minitel` or `esp_minitel_uart2`
+/// functions, depending on the target platform and enabled features. It can also operate on any
+/// std::io::Read and/or std::io::Write object.
 pub struct Minitel<S> {
     pub port: S,
 }

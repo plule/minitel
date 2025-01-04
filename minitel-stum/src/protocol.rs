@@ -1,6 +1,6 @@
 //! Exchange protocol between its components
 //!
-//! Reference: https://jbellue.github.io/stum1b/#2-6
+//! Reference: <https://jbellue.github.io/stum1b/#2-6>
 
 use core::fmt;
 use std::fmt::{Display, Formatter};
@@ -11,7 +11,7 @@ use crate::videotex;
 
 /// Emission code of the Minitel modules
 ///
-/// https://jbellue.github.io/stum1b/#2-6-1
+/// <https://jbellue.github.io/stum1b/#2-6-1>
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum RoutingTx {
@@ -23,7 +23,7 @@ pub enum RoutingTx {
 
 /// Reception code of the Minitel modules
 ///
-/// https://jbellue.github.io/stum1b/#2-6-1
+/// <https://jbellue.github.io/stum1b/#2-6-1>
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum RoutingRx {
@@ -35,7 +35,7 @@ pub enum RoutingRx {
 
 /// Escape sequence starting a protocol message
 ///
-/// https://jbellue.github.io/stum1b/#2-6-2
+/// <https://jbellue.github.io/stum1b/#2-6-2>
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum Protocol {
@@ -76,7 +76,7 @@ impl Protocol {
 
     /// Sequence for a protocol message to enable or disable a routing
     ///
-    /// https://jbellue.github.io/stum1b/#2-6-3
+    /// <https://jbellue.github.io/stum1b/#2-6-3>
     pub fn aiguillage(enable: bool, from: RoutingTx, to: RoutingRx) -> [u8; 5] {
         Self::pro3(
             if enable {
@@ -95,7 +95,7 @@ impl Protocol {
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum Pro1 {
     EnqSpeed = 0x74,
-    /// https://jbellue.github.io/stum1b/#2-6-6
+    /// <https://jbellue.github.io/stum1b/#2-6-6>
     EnqRom = 0x7B,
 }
 
@@ -134,7 +134,7 @@ pub enum Pro3Resp {
 
 /// Function mode for scrolling, error correcting, and lowercase
 ///
-/// https://jbellue.github.io/stum1b/#2-6-11
+/// <https://jbellue.github.io/stum1b/#2-6-11>
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, IntoPrimitive)]
 pub enum FunctionMode {
@@ -233,7 +233,7 @@ impl Display for Baudrate {
 
 /// Content of the ROM retrived after PRO1 ENQROM
 /// Are omitted the SOH and EOT starting and ending bytes
-/// https://jbellue.github.io/stum1b/#2-6-6
+/// <https://jbellue.github.io/stum1b/#2-6-6>
 pub struct Rom {
     pub manufacturer: u8,
     pub model: u8,
