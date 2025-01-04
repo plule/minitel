@@ -1,5 +1,7 @@
 # Minitel rust stack
 
+![Crates.io License](https://img.shields.io/crates/l/minitel) ![Crates.io Version](https://img.shields.io/crates/v/minitel) ![docs.rs](https://img.shields.io/docsrs/minitel) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/plule/minitel/ci.yml) 
+
 This is an experimental rust development stack dedicated to the [Minitel](https://en.wikipedia.org/wiki/Minitel).
 
 In its current state, it can be used to:
