@@ -60,8 +60,7 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
             self.cursor_position.0 += 1;
 
             // Zone attributes: background color, invert, ...
-            let mut zone_attributes = Vec::new();
-            zone_attributes.push(match cell.bg {
+            let mut zone_attributes = vec![match cell.bg {
                 Color::Black => C1::BgBlack,
                 Color::Red => C1::BgRed,
                 Color::Green => C1::BgGreen,
@@ -79,7 +78,7 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
                 Color::LightCyan => C1::BgCyan,
                 Color::White => C1::BgWhite,
                 _ => C1::BgBlack,
-            });
+            }];
             zone_attributes.push(match cell.modifier.contains(Modifier::UNDERLINED) {
                 true => C1::BeginUnderline,
                 false => C1::EndUnderline,

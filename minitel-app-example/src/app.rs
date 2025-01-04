@@ -102,12 +102,11 @@ impl App {
                         }
                         _ => {}
                     },
-                    SelectedTab::Borders | SelectedTab::World => match b {
-                        UserInput::FunctionKey(FunctionKey::Envoi) => {
+                    SelectedTab::Borders | SelectedTab::World => {
+                        if let UserInput::FunctionKey(FunctionKey::Envoi) = b {
                             self.demo_disjoint = !self.demo_disjoint;
                         }
-                        _ => {}
-                    },
+                    }
                     _ => {}
                 },
             }
@@ -309,18 +308,17 @@ impl App {
     fn draw_instructions(&self, buf: &mut Buffer, instructions_area: Rect) {
         let instructions_1 = Line::from(vec![
             " Onglets:".into(),
-            " Suite/Retour".reversed().into(),
+            " Suite/Retour".reversed(),
             " Quitter:".into(),
-            " Sommaire".reversed().into(),
+            " Sommaire".reversed(),
         ]);
 
         let instructions_2 = match self.selected_tab {
-            SelectedTab::Calendrier => Line::from(vec![
-                " Mois:".into(),
-                " Correction/Annulation".reversed().into(),
-            ]),
+            SelectedTab::Calendrier => {
+                Line::from(vec![" Mois:".into(), " Correction/Annulation".reversed()])
+            }
             SelectedTab::Borders | SelectedTab::World => {
-                Line::from(vec![" Joint/Disjoint:".into(), " Envoi".reversed().into()])
+                Line::from(vec![" Joint/Disjoint:".into(), " Envoi".reversed()])
             }
             _ => Line::default(),
         };

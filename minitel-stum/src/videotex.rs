@@ -434,7 +434,7 @@ impl TryFrom<char> for SIChar {
 
         // Diacritics
         let parts: SmallVec<[char; 2]> = value.nfd().take(2).collect();
-        if let (Some(base), Some(diacritic)) = (parts.get(0), parts.get(1)) {
+        if let (Some(base), Some(diacritic)) = (parts.first(), parts.get(1)) {
             if let (Ok(g0), Some(diacritic)) =
                 (G0::try_from(*base), G2::try_from_diactric(*diacritic))
             {
