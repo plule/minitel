@@ -11,7 +11,7 @@ env:
 
 jobs:
   esp:
-    name: Rust ESP Checks
+    name: ESP Checks
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -30,7 +30,7 @@ jobs:
         run: cargo build --release --config minitel-app-example/cargo-config-esp.toml --features esp -p minitel-app-example
       # clippy fails when using --config?
   desktop:
-    name: Rust Desktop Checks
+    name: Desktop Checks
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -40,8 +40,6 @@ jobs:
             args: --release
           - command: clippy
             args: -- -D warnings
-          - command: fmt
-            args: -- --check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,7 +53,7 @@ jobs:
       - name: Run command
         run: cargo ${{ matrix.action.command }} --features ws,ratatui --workspace --exclude minitel-esp ${{ matrix.action.args }}
   fmt:
-    name: Rust Fmt Checks
+    name: Fmt Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
