@@ -2,6 +2,14 @@
 name = "minitel-app-example"
 version = "0.1.0"
 edition = "2021"
+authors = ["Pierre Lulé <pierre@lule.fr>"]
+description = "Example application running on a minitel"
+readme = "../README.md"
+repository = "https://github.com/plule/minitel"
+license = "MIT OR Apache-2.0"
+categories = ["hardware-support", "api-bindings", "embedded", "web-programming"]
+keywords = ["minitel", "vidéotex", "télétel"]
+exclude = ["*.code-workspace", ".github", ".embuild", ".vscode"]
 
 [dependencies]
 env_logger = "0.11.6"

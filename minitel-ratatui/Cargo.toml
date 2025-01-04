@@ -2,6 +2,14 @@
 name = "minitel-ratatui"
 version = "0.1.0"
 edition = "2021"
+authors = ["Pierre Lulé <pierre@lule.fr>"]
+description = "Ratatui backend for the Minitel"
+readme = "../README.md"
+repository = "https://github.com/plule/minitel"
+license = "MIT OR Apache-2.0"
+categories = ["hardware-support", "api-bindings", "embedded"]
+keywords = ["minitel", "vidéotex", "télétel"]
+exclude = ["*.code-workspace", ".github", ".embuild", ".vscode"]
 
 [dependencies]
 minitel-stum = { version = "0.1.0", path = "../minitel-stum" }

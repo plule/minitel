@@ -24,7 +24,7 @@ fn handle_client(stream: TcpStream) -> Result<()> {
 pub fn main() {
     env_logger::init();
 
-    let server = TcpListener::bind("0.0.0.0:3615").unwrap();
+    let server = TcpListener::bind("127.0.0.1:3615").unwrap();
     log::info!("Listening");
 
     for stream in server.incoming() {
