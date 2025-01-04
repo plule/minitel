@@ -29,6 +29,7 @@ impl CharKind {
     }
 }
 
+/// Ratatui minitel backend
 pub struct MinitelBackend<S: MinitelRead + MinitelWrite> {
     pub minitel: Minitel<S>,
 

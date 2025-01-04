@@ -9,6 +9,7 @@ use esp_idf_hal::{
 };
 use minitel_stum::{Minitel, MinitelBaudrateControl, MinitelRead, MinitelWrite};
 
+/// Minitel instance using the ESP32 UART.
 pub type ESPMinitel<'a> = Minitel<ESPPort<'a>>;
 
 /// Create a new Minitel instance using the ESP32 UART.
@@ -25,7 +26,8 @@ pub fn default_uart_config() -> uart::UartConfig {
         .parity_even()
 }
 
-/// Create a new Minitel instance using the port 1 UART.
+/// Create a new Minitel instance using the port UART 2.
+///
 /// This is the port used in the ESP32 minitel development board from iodeo.
 pub fn esp_minitel_uart2() -> core::result::Result<ESPMinitel<'static>, EspError> {
     let peripherals = esp_idf_hal::peripherals::Peripherals::take()?;
@@ -43,6 +45,7 @@ pub fn esp_minitel_uart2() -> core::result::Result<ESPMinitel<'static>, EspError
     Ok(esp_minitel(uart, 50))
 }
 
+/// Implemenation of the minitel traits for the ESP32 UART.
 pub struct ESPPort<'a> {
     pub uart: uart::UartDriver<'a>,
     pub read_timeout: TickType_t,

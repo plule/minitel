@@ -17,7 +17,7 @@ pub enum UserInput {
 }
 
 /// Base control characters
-/// https://jbellue.github.io/stum1b/#2-2-1-2-4-2
+/// <https://jbellue.github.io/stum1b/#2-2-1-2-4-2>
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 pub enum C0 {
@@ -63,7 +63,7 @@ pub enum C0 {
 }
 
 /// ESC control character
-/// https://jbellue.github.io/stum1b/#2-2-1-2-4-2
+/// <https://jbellue.github.io/stum1b/#2-2-1-2-4-2>
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 pub enum C1 {
@@ -127,7 +127,7 @@ impl IntoSequence<2> for C1 {
 
 /// G0 characters (nearly ascii)
 ///
-/// https://jbellue.github.io/stum1b/#2-2-1-2-8
+/// <https://jbellue.github.io/stum1b/#2-2-1-2-8>
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct G0(pub u8);
 
@@ -192,7 +192,7 @@ impl TryFrom<char> for G0 {
 
 /// Semi-graphic sextant characters
 ///
-/// https://jbellue.github.io/stum1b/#2-2-1-2-8
+/// <https://jbellue.github.io/stum1b/#2-2-1-2-8>
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct G1(pub u8);
 
@@ -290,7 +290,7 @@ impl G1 {
     }
 }
 
-/// https://jbellue.github.io/stum1b/#2-2-1-2-8
+/// <https://jbellue.github.io/stum1b/#2-2-1-2-8>
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 pub enum G2 {
@@ -447,7 +447,7 @@ impl TryFrom<char> for SIChar {
 
 /// Function keys, preceeded with C0::SEP
 ///
-/// https://jbellue.github.io/stum1b/#2-3-6
+/// <https://jbellue.github.io/stum1b/#2-3-6>
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
 pub enum FunctionKey {
@@ -470,7 +470,7 @@ impl IntoSequence<2> for FunctionKey {
 
 /// Convenience for black&white minitels
 ///
-/// https://jbellue.github.io/stum1b/#1-3-2-4-3
+/// <https://jbellue.github.io/stum1b/#1-3-2-4-3>
 pub enum GrayScale {
     Black,
     Gray40,

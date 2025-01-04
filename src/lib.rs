@@ -7,14 +7,7 @@ pub mod stum {
     pub use minitel_stum::*;
 }
 
-/// Minitel interface, the entry point to the library
-///
-/// This struct wraps a serial port (websocket, physical, file, ...) and provides
-/// methods to interact with the device.
-///
-/// This struct can be initialized using the `ws_minitel`, `esp_minitel` or `esp_minitel_uart2`
-/// functions, depending on the target platform and enabled features. It can also operate on any
-/// std::io::Read and/or std::io::Write object.
+#[doc(inline)]
 pub use stum::Minitel;
 
 /// Websocket integration
@@ -28,9 +21,13 @@ pub mod ws {
 /// ESP32 integration
 ///
 /// Implements the necessary traits to use a Minitel terminal over an ESP32 microcontroller.
-#[cfg(feature = "esp")]
+#[cfg(any(feature = "esp", doc))]
 pub mod esp {
+    #[cfg(feature = "esp")]
     pub use minitel_esp::*;
+
+    #[cfg(not(feature = "esp"))]
+    pub use crate::minitel_esp::*;
 }
 
 /// Ratatui integration
@@ -42,16 +39,16 @@ pub mod ratatui {
     pub use minitel_ratatui::*;
 }
 
-/// Ratatui minitel backend
 #[cfg(feature = "ratatui")]
+#[doc(inline)]
 pub use minitel_ratatui::MinitelBackend;
 
-/// Minitel terminal used over a websocket connection
 #[cfg(feature = "ws")]
+#[doc(inline)]
 pub use minitel_ws::WSMinitel;
 
-/// Build a Minitel terminal over a websocket connection
 #[cfg(feature = "ws")]
+#[doc(inline)]
 pub use minitel_ws::ws_minitel;
 
 /// Websocket Minitel terminal used in ratatui applications
@@ -65,24 +62,70 @@ pub fn ws_terminal(minitel: minitel_ws::WSMinitel) -> std::io::Result<WSTerminal
     WSTerminal::new(ratatui::MinitelBackend::new(minitel))
 }
 
-/// Minitel terminal running on a ESP32
-#[cfg(feature = "esp")]
-pub use minitel_esp::ESPMinitel;
+#[cfg(any(feature = "esp", doc))]
+#[doc(inline)]
+pub use esp::ESPMinitel;
 
-/// Build a Minitel terminal on an ESP32
-#[cfg(feature = "esp")]
-pub use minitel_esp::esp_minitel;
+#[cfg(any(feature = "esp", doc))]
+#[doc(inline)]
+pub use esp::esp_minitel;
 
-/// Minitel terminal running on a ESP32, using UART2 (the default in the ESP32 minitel dev board from iodeo)
-#[cfg(feature = "esp")]
-pub use minitel_esp::esp_minitel_uart2;
+#[cfg(any(feature = "esp", doc))]
+#[doc(inline)]
+pub use esp::esp_minitel_uart2;
 
 /// Minitel terminal running on a ESP32 for ratatui applications
 #[cfg(all(feature = "esp", feature = "ratatui"))]
-pub type ESPTerminal<'a> = ::ratatui::Terminal<ratatui::MinitelBackend<minitel_esp::ESPPort<'a>>>;
+pub type ESPTerminal<'a> = ::ratatui::Terminal<ratatui::MinitelBackend<esp::ESPPort<'a>>>;
 
 /// Build a Minitel terminal on an ESP32 for ratatui applications
 #[cfg(all(feature = "esp", feature = "ratatui"))]
-pub fn esp_terminal<'a>(minitel: minitel_esp::ESPMinitel<'a>) -> std::io::Result<ESPTerminal<'a>> {
+pub fn esp_terminal<'a>(minitel: esp::ESPMinitel<'a>) -> std::io::Result<ESPTerminal<'a>> {
     ESPTerminal::new(ratatui::MinitelBackend::new(minitel))
+}
+
+// Below: doc shenanigans when ESP toolchain is not available
+
+/// Minitel terminal running on a ESP32 for ratatui applications
+///
+/// Generate the documentation locally with the ESP toolchain to see the actual content
+#[cfg(all(not(feature = "esp"), feature = "ratatui", doc))]
+pub type ESPTerminal = esp::ESPTerminal;
+
+/// Build a Minitel terminal on an ESP32 for ratatui applications
+///
+/// Generate the documentation locally with the ESP toolchain to see the actual content
+#[cfg(all(not(feature = "esp"), feature = "ratatui", doc))]
+pub fn esp_terminal() -> std::io::Result<ESPTerminal> {
+    unimplemented!()
+}
+
+/// ESP32 integration
+///
+/// Generate the documentation locally with the ESP toolchain to see the actual content
+#[cfg(all(not(feature = "esp"), doc))]
+pub mod minitel_esp {
+    /// Minitel terminal running on a ESP32
+    ///
+    /// Generate the documentation locally with the ESP toolchain to see the actual content
+    pub struct ESPMinitel;
+
+    /// Minitel terminal running on a ESP32 for ratatui applications
+    ///
+    /// Generate the documentation locally with the ESP toolchain to see the actual content
+    pub struct ESPTerminal;
+
+    /// Build a Minitel terminal on an ESP32
+    ///
+    /// Generate the documentation locally with the ESP toolchain to see the actual content
+    pub fn esp_minitel() -> ESPMinitel {
+        unimplemented!()
+    }
+
+    /// Minitel terminal running on a ESP32
+    ///
+    /// Generate the documentation locally with the ESP toolchain to see the actual content
+    pub fn esp_minitel_uart2() -> ESPMinitel {
+        unimplemented!()
+    }
 }

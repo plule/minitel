@@ -40,6 +40,11 @@ jobs:
             args: --release
           - command: clippy
             args: -- -D warnings
+          - command: doc
+            args: --no-deps
+          - command: test
+            args: --release
+          
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

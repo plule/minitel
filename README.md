@@ -37,7 +37,7 @@ This crates is a sample app that can be built into a websocket server or an embe
 Building for a websocket server: `cargo build -p minitel-app-example --features ws`.
 
 Building for ESP32: `cargo +esp --config minitel-app-example/cargo-config-esp.toml build -p minitel-app-example --features=esp`.
-Targetting an ESP32 requires to have s[etup an environment ready for ESP32 using the standard library](https://docs.esp-rs.org/book/introduction.html).
+Targetting an ESP32 requires to have [setup an environment ready for ESP32 using the standard library](https://docs.esp-rs.org/book/introduction.html).
 
 ## Ratatui integration
 
@@ -49,3 +49,8 @@ As a result, to control the background color, you must ensure to start the area 
 
 The current implementation does not take advantage of the Repeat control code, making page drawing slower than it should.
 
+## ESP32 toolchain
+
+Using the `esp` feature requires to have [setup an environment ready for ESP32 using the standard library](https://docs.esp-rs.org/book/introduction.html).
+
+By default, on `docs.rs` a fake documentation stub will be built for the main esp members. The actual doc can be built with `cargo +esp doc --config minitel-app-example/cargo-config-esp.toml --features ratatui,esp --open`
