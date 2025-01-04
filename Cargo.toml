@@ -39,8 +39,15 @@ ratatui = ["dep:ratatui", "dep:minitel-ratatui"]
 env_logger = "0.11.6"
 log = "0.4.22"
 tungstenite = "0.26.1"
-minitel = { version = "0.1.0", path = ".", features = ["ws", "ratatui"] }
 ratatui = { version = "0.29.0", default-features = false }
+
+[[example]]
+name = "ratatui"
+required-features = ["ratatui", "ws"]
+
+[[example]]
+name = "websocket"
+required-features = ["ws"]
 
 [package.metadata.docs.rs]
 features = ["ws", "ratatui"]

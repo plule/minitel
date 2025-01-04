@@ -54,3 +54,13 @@ The current implementation does not take advantage of the Repeat control code, m
 Using the `esp` feature requires to have [setup an environment ready for ESP32 using the standard library](https://docs.esp-rs.org/book/introduction.html).
 
 By default, on `docs.rs` a fake documentation stub will be built for the main esp members. The actual doc can be built with `cargo +esp doc --config minitel-app-example/cargo-config-esp.toml --features ratatui,esp --open`
+
+## Release
+
+```
+cargo publish -p minitel-stum
+cargo publish -p minitel-ws
+cargo publish -p minitel-ratatui
+cargo +esp publish --config minitel-app-example/cargo-config-esp.toml -p minitel-esp
+cargo publish -p minitel
+```

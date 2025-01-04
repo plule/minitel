@@ -1226,7 +1226,6 @@ version = "0.1.0"
 dependencies = [
  "env_logger",
  "log",
- "minitel",
  "minitel-esp",
  "minitel-ratatui",
  "minitel-stum",
