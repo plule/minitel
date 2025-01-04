@@ -119,7 +119,8 @@ mod esp {
         pub struct UartConfig;
 
         /// Stub for doc only
-        pub struct TickType_t;
+        #[allow(non_camel_case_types)]
+        pub type TickType_t = u32;
 
         /// Stub for doc only
         pub struct EspError;
