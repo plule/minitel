@@ -1,6 +1,6 @@
 [package]
 name = "minitel-esp"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Pierre Lulé <pierre@lule.fr>"]
 description = "Minitel integration for ESP32 board"
@@ -13,7 +13,7 @@ exclude = ["*.code-workspace", ".github", ".embuild", ".vscode"]
 
 [dependencies]
 esp-idf-hal = { version = "0.44.1", optional = true }
-minitel-stum = { version = "0.1.0", path = "../minitel-stum" }
+minitel-stum = { version = "0.1.1", path = "../minitel-stum" }
 
 [features]
 default = ["esp"]

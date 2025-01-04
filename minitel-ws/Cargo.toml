@@ -1,6 +1,6 @@
 [package]
 name = "minitel-ws"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Pierre Lulé <pierre@lule.fr>"]
 description = "Minitel integration for tungstenite websocket"
@@ -18,5 +18,5 @@ exclude = ["*.code-workspace", ".github", ".embuild", ".vscode"]
 
 [dependencies]
 log = "0.4.22"
-minitel-stum = { version = "0.1.0", path = "../minitel-stum" }
+minitel-stum = { version = "0.1.1", path = "../minitel-stum" }
 tungstenite = "0.26.1"

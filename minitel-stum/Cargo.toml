@@ -1,6 +1,6 @@
 [package]
 name = "minitel-stum"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Pierre Lulé <pierre@lule.fr>"]
 description = "Spécifications Techniques d'Utilisation du Minitel"
