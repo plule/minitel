@@ -1,4 +1,5 @@
 #![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 /// Core Minitel types and traits
 ///
@@ -21,13 +22,10 @@ pub mod ws {
 /// ESP32 integration
 ///
 /// Implements the necessary traits to use a Minitel terminal over an ESP32 microcontroller.
-#[cfg(any(feature = "esp", doc))]
+#[cfg(feature = "esp")]
 pub mod esp {
-    #[cfg(feature = "esp")]
+    #[doc(inline)]
     pub use minitel_esp::*;
-
-    #[cfg(not(feature = "esp"))]
-    pub use crate::minitel_esp::*;
 }
 
 /// Ratatui integration
@@ -62,15 +60,15 @@ pub fn ws_terminal(minitel: minitel_ws::WSMinitel) -> std::io::Result<WSTerminal
     WSTerminal::new(ratatui::MinitelBackend::new(minitel))
 }
 
-#[cfg(any(feature = "esp", doc))]
+#[cfg(feature = "esp")]
 #[doc(inline)]
 pub use esp::ESPMinitel;
 
-#[cfg(any(feature = "esp", doc))]
+#[cfg(feature = "esp")]
 #[doc(inline)]
 pub use esp::esp_minitel;
 
-#[cfg(any(feature = "esp", doc))]
+#[cfg(feature = "esp")]
 #[doc(inline)]
 pub use esp::esp_minitel_uart2;
 
@@ -82,50 +80,4 @@ pub type ESPTerminal<'a> = ::ratatui::Terminal<ratatui::MinitelBackend<esp::ESPP
 #[cfg(all(feature = "esp", feature = "ratatui"))]
 pub fn esp_terminal<'a>(minitel: esp::ESPMinitel<'a>) -> std::io::Result<ESPTerminal<'a>> {
     ESPTerminal::new(ratatui::MinitelBackend::new(minitel))
-}
-
-// Below: doc shenanigans when ESP toolchain is not available
-
-/// Minitel terminal running on a ESP32 for ratatui applications
-///
-/// Generate the documentation locally with the ESP toolchain to see the actual content
-#[cfg(all(not(feature = "esp"), feature = "ratatui", doc))]
-pub type ESPTerminal = esp::ESPTerminal;
-
-/// Build a Minitel terminal on an ESP32 for ratatui applications
-///
-/// Generate the documentation locally with the ESP toolchain to see the actual content
-#[cfg(all(not(feature = "esp"), feature = "ratatui", doc))]
-pub fn esp_terminal() -> std::io::Result<ESPTerminal> {
-    unimplemented!()
-}
-
-/// ESP32 integration
-///
-/// Generate the documentation locally with the ESP toolchain to see the actual content
-#[cfg(all(not(feature = "esp"), doc))]
-pub mod minitel_esp {
-    /// Minitel terminal running on a ESP32
-    ///
-    /// Generate the documentation locally with the ESP toolchain to see the actual content
-    pub struct ESPMinitel;
-
-    /// Minitel terminal running on a ESP32 for ratatui applications
-    ///
-    /// Generate the documentation locally with the ESP toolchain to see the actual content
-    pub struct ESPTerminal;
-
-    /// Build a Minitel terminal on an ESP32
-    ///
-    /// Generate the documentation locally with the ESP toolchain to see the actual content
-    pub fn esp_minitel() -> ESPMinitel {
-        unimplemented!()
-    }
-
-    /// Minitel terminal running on a ESP32
-    ///
-    /// Generate the documentation locally with the ESP toolchain to see the actual content
-    pub fn esp_minitel_uart2() -> ESPMinitel {
-        unimplemented!()
-    }
 }
