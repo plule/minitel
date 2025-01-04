@@ -2,6 +2,19 @@
 name = "minitel-ws"
 version = "0.1.0"
 edition = "2021"
+authors = ["Pierre Lulé <pierre@lule.fr>"]
+description = "Minitel integration for tungstenite websocket"
+readme = "../README.md"
+repository = "https://github.com/plule/minitel"
+license = "MIT OR Apache-2.0"
+categories = [
+    "hardware-support",
+    "api-bindings",
+    "web-programming",
+    "web-programming::websocket",
+]
+keywords = ["minitel", "videotex", "teletel"]
+exclude = ["*.code-workspace", ".github", ".embuild", ".vscode"]
 
 [dependencies]
 log = "0.4.22"

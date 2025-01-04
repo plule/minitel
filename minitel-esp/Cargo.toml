@@ -3,12 +3,12 @@ name = "minitel-esp"
 version = "0.1.0"
 edition = "2021"
 authors = ["Pierre Lulé <pierre@lule.fr>"]
-description = "Integration of ESP32 uart driver with minitel"
+description = "Minitel integration for ESP32 board"
 readme = "../README.md"
 repository = "https://github.com/plule/minitel"
 license = "MIT OR Apache-2.0"
 categories = ["hardware-support", "api-bindings", "embedded"]
-keywords = ["minitel", "vidéotex", "télétel"]
+keywords = ["minitel", "videotex", "teletel"]
 exclude = ["*.code-workspace", ".github", ".embuild", ".vscode"]
 
 [dependencies]

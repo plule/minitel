@@ -8,7 +8,7 @@ readme = "../README.md"
 repository = "https://github.com/plule/minitel"
 license = "MIT OR Apache-2.0"
 categories = ["hardware-support", "api-bindings", "embedded"]
-keywords = ["minitel", "vidéotex", "télétel"]
+keywords = ["minitel", "videotex", "teletel"]
 exclude = ["*.code-workspace", ".github", ".embuild", ".vscode"]
 
 [dependencies]
