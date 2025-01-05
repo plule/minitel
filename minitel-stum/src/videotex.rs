@@ -1,4 +1,4 @@
-use crate::IntoSequence;
+use crate::{IntoSequence, Message};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use smallvec::SmallVec;
 use unicode_normalization::UnicodeNormalization;
@@ -14,6 +14,25 @@ pub enum UserInput {
     C1(C1),
     /// One of the function keys
     FunctionKey(FunctionKey),
+}
+
+pub struct StringMessage(pub String);
+
+impl Message for StringMessage {
+    fn message(self) -> Vec<u8> {
+        self.0
+            .chars()
+            .flat_map(SIChar::try_from)
+            .flat_map(|c| c.message())
+            .collect()
+    }
+}
+
+pub struct SetPosition(pub u8, pub u8);
+impl Message for SetPosition {
+    fn message(self) -> Vec<u8> {
+        vec![C0::US.into(), 0x40 + self.1, 0x40 + self.0 + 1]
+    }
 }
 
 /// Base control characters
@@ -42,9 +61,11 @@ pub enum C0 {
     SO = 0x0E,
     SI = 0x0F,
     DLE = 0x10,
+    /// Show cursor
     Con = 0x11,
     Rep = 0x12,
     Sep = 0x13,
+    /// Hide cursor
     Coff = 0x14,
     NACK = 0x15,
     SYN = 0x16,
@@ -60,6 +81,12 @@ pub enum C0 {
     RS = 0x1E,
     /// Sub article separator
     US = 0x1F,
+}
+
+impl Message for C0 {
+    fn message(self) -> Vec<u8> {
+        vec![self.into()]
+    }
 }
 
 /// ESC control character
@@ -125,6 +152,12 @@ impl IntoSequence<2> for C1 {
     }
 }
 
+impl Message for C1 {
+    fn message(self) -> Vec<u8> {
+        vec![C0::ESC.into(), self.into()]
+    }
+}
+
 /// G0 characters (nearly ascii)
 ///
 /// <https://jbellue.github.io/stum1b/#2-2-1-2-8>
@@ -140,6 +173,12 @@ impl From<G0> for u8 {
 impl IntoSequence<1> for G0 {
     fn sequence(self) -> [u8; 1] {
         [self.0]
+    }
+}
+
+impl Message for G0 {
+    fn message(self) -> Vec<u8> {
+        vec![self.into()]
     }
 }
 
@@ -199,6 +238,12 @@ pub struct G1(pub u8);
 impl From<G1> for u8 {
     fn from(g1: G1) -> u8 {
         g1.0
+    }
+}
+
+impl Message for G1 {
+    fn message(self) -> Vec<u8> {
+        vec![self.into()]
     }
 }
 
@@ -324,6 +369,12 @@ impl IntoSequence<2> for G2 {
     }
 }
 
+impl Message for G2 {
+    fn message(self) -> Vec<u8> {
+        vec![C0::SS2.into(), self.into()]
+    }
+}
+
 impl G2 {
     pub fn char(self) -> char {
         match self {
@@ -418,6 +469,16 @@ pub enum SIChar {
     G2(G2),
 }
 
+impl Message for SIChar {
+    fn message(self) -> Vec<u8> {
+        match self {
+            SIChar::G0(g0) => g0.message(),
+            SIChar::G0Diacritic(g0, g2) => [g2.message(), g0.message()].concat(),
+            SIChar::G2(g2) => g2.message(),
+        }
+    }
+}
+
 impl TryFrom<char> for SIChar {
     type Error = ();
 
@@ -465,6 +526,12 @@ pub enum FunctionKey {
 impl IntoSequence<2> for FunctionKey {
     fn sequence(self) -> [u8; 2] {
         [C0::Sep.into(), self.into()]
+    }
+}
+
+impl Message for FunctionKey {
+    fn message(self) -> Vec<u8> {
+        vec![C0::Sep.into(), self.into()]
     }
 }
 

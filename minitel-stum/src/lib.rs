@@ -14,6 +14,7 @@ use crate::{
     videotex::{C0, C1, G2},
 };
 
+use protocol::ProtocolMessage;
 use videotex::{FunctionKey, SIChar, UserInput, G0};
 
 use std::io::{Error, ErrorKind, Result};
@@ -25,12 +26,482 @@ pub trait IntoSequence<const N: usize> {
     fn sequence(self) -> [u8; N];
 }
 
+pub trait Message {
+    fn message(self) -> Vec<u8>;
+}
+
 impl<T, const N: usize> IntoSequence<N> for &[T; N]
 where
     T: Into<u8> + Copy,
 {
     fn sequence(self) -> [u8; N] {
         self.map(|x| x.into())
+    }
+}
+
+#[allow(async_fn_in_trait)]
+pub trait AsyncMinitelRead {
+    async fn read(&mut self, data: &mut [u8]) -> Result<()>;
+
+    #[inline(always)]
+    async fn read_byte(&mut self) -> Result<u8> {
+        let mut data = [0];
+        self.read(&mut data).await?;
+        Ok(data[0])
+    }
+
+    /// Read a key stroke from the minitel assuming it is in S0 (text) mode.
+    ///
+    /// G0 and G2 characters are returned as unicode characters.
+    async fn read_s0_stroke(&mut self) -> Result<UserInput> {
+        let b = self.read_byte().await?;
+        if let Ok(g0) = G0::try_from(b) {
+            return Ok(UserInput::Char(g0.into()));
+        }
+        let c0 = C0::try_from(b).map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        match c0 {
+            C0::ESC => {
+                // ESC code, C1 special char
+                let c1 = C1::try_from(self.read_byte().await?)
+                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+                Ok(UserInput::C1(c1))
+            }
+            C0::Sep => {
+                // SEP code, function key
+                let fct = FunctionKey::try_from(self.read_byte().await?)
+                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+                Ok(UserInput::FunctionKey(fct))
+            }
+            C0::SS2 => {
+                // SS2 code, G2 char, returned as unicode char
+                let g2 = G2::try_from(self.read_byte().await?)
+                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+                if let Some(diacritics) = g2.unicode_diacritic() {
+                    // With diacritics, read one more byte for the base char
+                    let char: char = self.read_byte().await?.into();
+                    let char = unicode_normalization::char::compose(char, diacritics).ok_or(
+                        Error::new(ErrorKind::InvalidData, "Invalid diacritic composition"),
+                    )?;
+                    Ok(UserInput::Char(char))
+                } else {
+                    // Without diacritic, return the char directly
+                    Ok(UserInput::Char(g2.char()))
+                }
+            }
+            _ => Ok(UserInput::C0(c0)),
+        }
+    }
+
+    #[inline(always)]
+    async fn wait_for(&mut self, byte: impl Into<u8> + Copy) -> Result<()> {
+        for _ in 0..10 {
+            if self.read_byte().await? == byte.into() {
+                return Ok(());
+            }
+        }
+        Err(ErrorKind::TimedOut.into())
+    }
+
+    #[inline(always)]
+    async fn expect_read(&mut self, byte: impl Into<u8> + Copy) -> Result<()> {
+        let got = self.read_byte().await?;
+        if got != byte.into() {
+            return Err(ErrorKind::InvalidData.into());
+        }
+        Ok(())
+    }
+
+    #[inline(always)]
+    async fn read_pro2(&mut self, expected_ack: Pro2Resp) -> Result<u8> {
+        self.wait_for(C0::ESC).await?;
+        self.expect_read(Protocol::Pro2).await?;
+        self.expect_read(expected_ack).await?;
+        self.read_byte().await
+    }
+
+    #[inline(always)]
+    async fn read_pro3(&mut self, expected_ack: Pro3Resp) -> Result<(u8, u8)> {
+        self.wait_for(C0::ESC).await?;
+        self.expect_read(Protocol::Pro3).await?;
+        self.expect_read(expected_ack).await?;
+        Ok((self.read_byte().await?, self.read_byte().await?))
+    }
+}
+
+#[allow(async_fn_in_trait)]
+pub trait AsyncMinitelWrite {
+    async fn write(&mut self, data: &[u8]) -> Result<()>;
+    async fn flush(&mut self) -> Result<()>;
+
+    async fn send(&mut self, message: impl Message) -> Result<()> {
+        self.write(&message.message()).await
+    }
+}
+
+/// Ability to change the baudrate of the serial port
+#[allow(async_fn_in_trait)]
+pub trait AsyncMinitelBaudrateControl {
+    /// Change the baudrate of the serial port
+    fn set_baudrate(&mut self, baudrate: Baudrate) -> Result<()>;
+
+    /// Read, non async
+    fn read_byte_blocking(&mut self) -> Result<u8>;
+}
+
+#[allow(async_fn_in_trait)]
+pub trait AsyncMinitelReadWrite: AsyncMinitelRead + AsyncMinitelWrite {
+    #[inline(always)]
+    async fn read_rom(&mut self) -> Result<Rom> {
+        self.send(ProtocolMessage::Pro1(Pro1::EnqRom)).await?;
+        self.wait_for(C0::SOH).await?;
+        let mut rom = [0; 3];
+        self.read(&mut rom).await?;
+        self.expect_read(C0::EOL).await?;
+        Ok(rom.into())
+    }
+
+    #[inline(always)]
+    async fn get_pos(&mut self) -> Result<(u8, u8)> {
+        self.send(C1::EnqCursor).await?;
+        self.wait_for(C0::US).await?;
+        let mut position = [0; 2];
+        self.read(&mut position).await?;
+        Ok((position[1] - 0x40 - 1, position[0] - 0x40 - 1))
+    }
+
+    #[inline(always)]
+    async fn set_function_mode(&mut self, mode: FunctionMode, enable: bool) -> Result<()> {
+        self.send(ProtocolMessage::function_mode(mode, enable))
+            .await?;
+        let _status = self.read_pro2(Pro2Resp::RepStatus).await?;
+        Ok(())
+    }
+
+    #[inline(always)]
+    async fn set_routing(
+        &mut self,
+        enable: bool,
+        recepter: RoutingRx,
+        emitter: RoutingTx,
+    ) -> Result<()> {
+        self.send(ProtocolMessage::aiguillage(enable, emitter, recepter))
+            .await?;
+        let (_recepter, _status) = self.read_pro3(Pro3Resp::RoutingFrom).await?;
+        Ok(())
+    }
+
+    #[inline(always)]
+    async fn get_speed(&mut self) -> Result<Baudrate> {
+        self.send(ProtocolMessage::Pro1(Pro1::EnqSpeed)).await?;
+        let code = self.read_pro2(Pro2Resp::QuerySpeedAnswer).await?;
+        Baudrate::try_from(code).map_err(|_| ErrorKind::InvalidData.into())
+    }
+}
+
+/// Ability to communicate with a minitel through a serial port with baudrate control
+#[allow(async_fn_in_trait)]
+pub trait AsyncMinitelReadWriteBaudrate:
+    AsyncMinitelReadWrite + AsyncMinitelBaudrateControl
+{
+    async fn search_speed(&mut self) -> Result<Baudrate> {
+        for baudrate in [
+            Baudrate::B1200,
+            Baudrate::B9600,
+            Baudrate::B300,
+            Baudrate::B4800,
+        ] {
+            log::info!("Trying baudrate: {}", baudrate);
+            self.flush().await?;
+            self.set_baudrate(baudrate)?;
+            self.send(ProtocolMessage::Pro1(Pro1::EnqSpeed)).await?;
+            if let Ok(speed) = self.get_speed_blocking() {
+                log::info!("Found baudrate: {}", speed);
+                return Ok(speed);
+            }
+        }
+        Err(ErrorKind::NotFound.into())
+    }
+
+    fn get_speed_blocking(&mut self) -> Result<Baudrate> {
+        // blocking read, can't make async timeout work on esp
+        for _ in 0..10 {
+            if let Ok(Ok(C0::ESC)) = self.read_byte_blocking().map(C0::try_from) {
+                if let Ok(Ok(Protocol::Pro2)) = self.read_byte_blocking().map(Protocol::try_from) {
+                    if let Ok(Ok(Pro2Resp::QuerySpeedAnswer)) =
+                        self.read_byte_blocking().map(Pro2Resp::try_from)
+                    {
+                        let code = self.read_byte_blocking()?;
+                        return Baudrate::try_from(code).map_err(|_| ErrorKind::InvalidData.into());
+                    }
+                }
+            }
+        }
+        Err(ErrorKind::NotFound.into())
+    }
+
+    #[inline(always)]
+    async fn set_speed(&mut self, baudrate: Baudrate) -> Result<Baudrate> {
+        self.send(ProtocolMessage::Pro2(Pro2::Prog, baudrate.code()))
+            .await?;
+        self.flush().await?;
+        self.set_baudrate(baudrate)?;
+
+        let speed_code = self.read_pro2(Pro2Resp::QuerySpeedAnswer).await?;
+        let baudrate = Baudrate::try_from(speed_code).map_err(|_| ErrorKind::InvalidData)?;
+        Ok(baudrate)
+    }
+}
+
+impl<T> AsyncMinitelReadWrite for T where T: AsyncMinitelRead + AsyncMinitelWrite {}
+impl<T> AsyncMinitelReadWriteBaudrate for T where
+    T: AsyncMinitelRead + AsyncMinitelWrite + AsyncMinitelBaudrateControl
+{
+}
+
+pub struct AsyncMinitel<S> {
+    pub port: S,
+}
+
+impl<S> AsyncMinitel<S> {
+    pub fn new(port: S) -> Self {
+        Self { port }
+    }
+}
+
+impl<S: AsyncMinitelWrite> AsyncMinitel<S> {
+    pub async fn write_sequence<const N: usize>(&mut self, s: impl IntoSequence<N>) -> Result<()> {
+        self.port.write(&s.sequence()).await
+    }
+
+    #[inline(always)]
+    pub async fn write_str(&mut self, s: &str) -> Result<()> {
+        for c in s.chars() {
+            self.write_char(c).await?;
+        }
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub async fn write_char(&mut self, c: char) -> Result<()> {
+        if let Ok(c) = SIChar::try_from(c) {
+            self.si_char(c).await?;
+            return Ok(());
+        }
+        Err(ErrorKind::InvalidData.into())
+    }
+
+    #[inline(always)]
+    pub async fn si_char(&mut self, c: SIChar) -> Result<()> {
+        match c {
+            SIChar::G0(g0) => self.write_byte(g0).await?,
+            SIChar::G0Diacritic(g0, g2) => {
+                self.write_g2(g2).await?;
+                self.write_byte(g0).await?;
+            }
+            SIChar::G2(g2) => self.write_g2(g2).await?,
+        }
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub async fn write_g2(&mut self, g2: G2) -> Result<()> {
+        self.port.write(&g2.sequence()).await
+    }
+
+    #[inline(always)]
+    pub async fn write_byte(&mut self, byte: impl Into<u8>) -> Result<()> {
+        self.port.write(&[byte.into()]).await
+    }
+
+    /// Protocol command with a single argument
+    #[inline(always)]
+    pub async fn pro1(&mut self, x: Pro1) -> Result<()> {
+        self.port.write(&Protocol::pro1(x)).await?;
+        Ok(())
+    }
+
+    /// Protocol command with two arguments
+    #[inline(always)]
+    pub async fn pro2(&mut self, x: Pro2, y: impl Into<u8> + Copy) -> Result<()> {
+        self.port.write(&Protocol::pro2(x, y)).await?;
+        Ok(())
+    }
+
+    /// Protocol command with three arguments
+    #[inline(always)]
+    pub async fn pro3(
+        &mut self,
+        x: Pro3,
+        y: impl Into<u8> + Copy,
+        z: impl Into<u8> + Copy,
+    ) -> Result<()> {
+        self.port.write(&Protocol::pro3(x, y, z)).await?;
+        Ok(())
+    }
+}
+
+impl<S: AsyncMinitelRead> AsyncMinitel<S> {
+    /// Read a raw sequence from the minitel
+    #[inline(always)]
+    pub async fn read_bytes(&mut self, data: &mut [u8]) -> Result<()> {
+        self.port.read(data).await
+    }
+
+    /// Read a single byte from the minitel
+    #[inline(always)]
+    pub async fn read_byte(&mut self) -> Result<u8> {
+        let mut data = [0];
+        self.read_bytes(&mut data).await?;
+        Ok(data[0])
+    }
+
+    /// Read a key stroke from the minitel assuming it is in S0 (text) mode.
+    ///
+    /// G0 and G2 characters are returned as unicode characters.
+    pub async fn read_s0_stroke(&mut self) -> Result<UserInput> {
+        let b = self.read_byte().await?;
+        if let Ok(g0) = G0::try_from(b) {
+            return Ok(UserInput::Char(g0.into()));
+        }
+        let c0 = C0::try_from(b).map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        match c0 {
+            C0::ESC => {
+                // ESC code, C1 special char
+                let c1 = C1::try_from(self.read_byte().await?)
+                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+                Ok(UserInput::C1(c1))
+            }
+            C0::Sep => {
+                // SEP code, function key
+                let fct = FunctionKey::try_from(self.read_byte().await?)
+                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+                Ok(UserInput::FunctionKey(fct))
+            }
+            C0::SS2 => {
+                // SS2 code, G2 char, returned as unicode char
+                let g2 = G2::try_from(self.read_byte().await?)
+                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+
+                if let Some(diacritics) = g2.unicode_diacritic() {
+                    // With diacritics, read one more byte for the base char
+                    let char: char = self.read_byte().await?.into();
+                    let char = unicode_normalization::char::compose(char, diacritics).ok_or(
+                        Error::new(ErrorKind::InvalidData, "Invalid diacritic composition"),
+                    )?;
+                    Ok(UserInput::Char(char))
+                } else {
+                    // Without diacritic, return the char directly
+                    Ok(UserInput::Char(g2.char()))
+                }
+            }
+            _ => Ok(UserInput::C0(c0)),
+        }
+    }
+
+    #[inline(always)]
+    pub async fn wait_for(&mut self, byte: impl Into<u8> + Copy) -> Result<()> {
+        for _ in 0..10 {
+            if self.read_byte().await? == byte.into() {
+                return Ok(());
+            }
+        }
+        Err(ErrorKind::TimedOut.into())
+    }
+
+    #[inline(always)]
+    pub async fn expect_read(&mut self, byte: impl Into<u8> + Copy) -> Result<()> {
+        let got = self.read_byte().await?;
+        if got != byte.into() {
+            return Err(ErrorKind::InvalidData.into());
+        }
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub async fn read_pro2(&mut self, expected_ack: Pro2Resp) -> Result<u8> {
+        self.wait_for(C0::ESC).await?;
+        self.expect_read(Protocol::Pro2).await?;
+        self.expect_read(expected_ack).await?;
+        self.read_byte().await
+    }
+
+    #[inline(always)]
+    pub async fn read_pro3(&mut self, expected_ack: Pro3Resp) -> Result<(u8, u8)> {
+        self.wait_for(C0::ESC).await?;
+        self.expect_read(Protocol::Pro3).await?;
+        self.expect_read(expected_ack).await?;
+        Ok((self.read_byte().await?, self.read_byte().await?))
+    }
+}
+
+impl<S: AsyncMinitelRead + AsyncMinitelWrite> AsyncMinitel<S> {
+    #[inline(always)]
+    pub async fn read_rom(&mut self) -> Result<Rom> {
+        self.pro1(Pro1::EnqRom).await?;
+        self.wait_for(C0::SOH).await?;
+        let mut rom = [0; 3];
+        self.read_bytes(&mut rom).await?;
+        self.expect_read(C0::EOL).await?;
+        Ok(rom.into())
+    }
+
+    #[inline(always)]
+    pub async fn get_pos(&mut self) -> Result<(u8, u8)> {
+        self.write_sequence(C1::EnqCursor).await?;
+        self.wait_for(C0::US).await?;
+        let mut position = [0; 2];
+        self.read_bytes(&mut position).await?;
+        Ok((position[1] - 0x40 - 1, position[0] - 0x40 - 1))
+    }
+
+    #[inline(always)]
+    pub async fn set_function_mode(&mut self, mode: FunctionMode, enable: bool) -> Result<()> {
+        let start_stop = if enable { Pro2::Start } else { Pro2::Stop };
+        self.pro2(start_stop, mode).await?;
+        let _status = self.read_pro2(Pro2Resp::RepStatus).await?;
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub async fn set_routing(
+        &mut self,
+        enable: bool,
+        recepter: RoutingRx,
+        emitter: RoutingTx,
+    ) -> Result<()> {
+        let cmd = if enable {
+            Pro3::RoutingOn
+        } else {
+            Pro3::RoutingOff
+        };
+        self.pro3(cmd, recepter, emitter).await?;
+        let (_recepter, _status) = self.read_pro3(Pro3Resp::RoutingFrom).await?;
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub async fn get_speed(&mut self) -> Result<Baudrate> {
+        self.pro1(Pro1::EnqSpeed).await?;
+        let code = self.read_pro2(Pro2Resp::QuerySpeedAnswer).await?;
+        Baudrate::try_from(code).map_err(|_| ErrorKind::InvalidData.into())
+    }
+
+    #[inline(always)]
+    pub async fn set_rouleau(&mut self, enable: bool) -> Result<()> {
+        self.set_function_mode(FunctionMode::Rouleau, enable).await
+    }
+
+    #[inline(always)]
+    pub async fn set_procedure(&mut self, enable: bool) -> Result<()> {
+        self.set_function_mode(FunctionMode::Procedure, enable)
+            .await
+    }
+
+    #[inline(always)]
+    pub async fn set_minuscule(&mut self, enable: bool) -> Result<()> {
+        self.set_function_mode(FunctionMode::Minuscule, enable)
+            .await
     }
 }
 
@@ -73,11 +544,6 @@ impl<S> Minitel<S> {
 }
 
 impl<S: MinitelRead + MinitelWrite> Minitel<S> {
-    #[inline(always)]
-    pub fn clear_screen(&mut self) -> Result<()> {
-        self.write_byte(C0::FF)
-    }
-
     #[inline(always)]
     pub fn read_rom(&mut self) -> Result<Rom> {
         self.pro1(Pro1::EnqRom)?;
@@ -261,6 +727,11 @@ impl<S: MinitelWrite> Minitel<S> {
     #[inline(always)]
     pub fn write_sequence<const N: usize>(&mut self, sequence: impl IntoSequence<N>) -> Result<()> {
         self.write_bytes(sequence.sequence().as_ref())
+    }
+
+    #[inline(always)]
+    pub fn clear_screen(&mut self) -> Result<()> {
+        self.write_byte(C0::FF)
     }
 
     #[inline(always)]

@@ -1,11 +1,13 @@
+use std::io::Write;
+
 use backend::WindowSize;
 
 use ratatui::backend::Backend;
 use ratatui::prelude::*;
 
 use minitel_stum::{
-    videotex::{GrayScale, SIChar, C0, C1, G0, G1},
-    Minitel, MinitelRead, MinitelWrite,
+    videotex::{GrayScale, SIChar, SetPosition, C0, C1, G0, G1},
+    Message,
 };
 
 /// Keep track of the contextual data
@@ -30,8 +32,8 @@ impl CharKind {
 }
 
 /// Ratatui minitel backend
-pub struct MinitelBackend<S: MinitelRead + MinitelWrite> {
-    pub minitel: Minitel<S>,
+pub struct MinitelBackend<S: Write> {
+    pub stream: S,
 
     cursor_position: (u16, u16),
     last_char_kind: CharKind,
@@ -39,19 +41,26 @@ pub struct MinitelBackend<S: MinitelRead + MinitelWrite> {
     zone_attributes: Vec<C1>,
 }
 
-impl<S: MinitelRead + MinitelWrite> MinitelBackend<S> {
-    pub fn new(minitel: Minitel<S>) -> Self {
+impl<S: Write> MinitelBackend<S> {
+    pub fn new(stream: S) -> Self {
         Self {
-            minitel,
+            stream,
             cursor_position: (255, 255),
             last_char_kind: CharKind::None,
             char_attributes: Vec::new(),
             zone_attributes: Vec::new(),
         }
     }
+
+    fn send<T>(&mut self, message: T) -> std::io::Result<()>
+    where
+        T: Message,
+    {
+        self.stream.write_all(&message.message())
+    }
 }
 
-impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
+impl<S: Write> Backend for MinitelBackend<S> {
     #[inline(always)]
     fn draw<'a, I>(&mut self, content: I) -> std::io::Result<()>
     where
@@ -150,8 +159,10 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
                 self.last_char_kind = char_kind;
 
                 // Move the cursor to the right position, select the char set
-                self.minitel.set_pos(x as u8, y as u8)?;
-                self.minitel.write_byte(char_kind.escape_code() as u8)?;
+                self.stream
+                    .write_all(&SetPosition(x as u8, y as u8).message())?;
+
+                self.send(char_kind.escape_code())?;
             }
 
             match char_kind {
@@ -159,39 +170,38 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
                     // Empty char, update the zone attributes if necessary
                     if self.zone_attributes != zone_attributes {
                         for attr in &zone_attributes {
-                            self.minitel.c1(*attr)?;
+                            self.send(*attr)?;
                         }
                         self.zone_attributes.clone_from(&zone_attributes);
                     }
-                    self.minitel.write_byte(0x20)?;
+                    self.send(SIChar::G0(G0(0x20)))?;
                 }
                 CharKind::Alphabet(c) => {
                     // Alphabetic char, update the char attributes if necessary
                     if self.char_attributes != char_attributes {
                         for attr in &char_attributes {
-                            self.minitel.c1(*attr)?;
+                            self.send(*attr)?;
                         }
                         self.char_attributes.clone_from(&char_attributes);
                     }
-
-                    self.minitel.si_char(c)?;
+                    self.send(c)?;
                 }
                 CharKind::SemiGraphic(c) => {
                     // Semigraphic char, update both the zone and char attributes if necessary
                     if self.zone_attributes != zone_attributes {
                         for attr in &zone_attributes {
-                            self.minitel.c1(*attr)?;
+                            self.send(*attr)?;
                         }
                         self.zone_attributes.clone_from(&zone_attributes);
                     }
                     if self.char_attributes != char_attributes {
                         for attr in &char_attributes {
-                            self.minitel.c1(*attr)?;
+                            self.send(*attr)?;
                         }
                         self.char_attributes.clone_from(&char_attributes);
                     }
                     // Write the semi graphic char
-                    self.minitel.write_byte(c)?;
+                    self.send(c)?;
                 }
                 _ => {}
             }
@@ -200,18 +210,17 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
     }
 
     fn hide_cursor(&mut self) -> std::io::Result<()> {
-        self.minitel.hide_cursor()?;
+        self.send(C0::Coff)?;
         Ok(())
     }
 
     fn show_cursor(&mut self) -> std::io::Result<()> {
-        self.minitel.show_cursor()?;
+        self.send(C0::Con)?;
         Ok(())
     }
 
     fn get_cursor_position(&mut self) -> std::io::Result<ratatui::prelude::Position> {
-        let (x, y) = self.minitel.get_pos()?;
-        Ok(Position::new(x as u16, y as u16))
+        Ok(self.cursor_position.into())
     }
 
     fn set_cursor_position<P: Into<ratatui::prelude::Position>>(
@@ -219,12 +228,12 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
         position: P,
     ) -> std::io::Result<()> {
         let position: Position = position.into();
-        self.minitel.set_pos(position.x as u8, position.y as u8)?;
+        self.send(SetPosition(position.x as u8, position.y as u8))?;
         Ok(())
     }
 
     fn clear(&mut self) -> std::io::Result<()> {
-        self.minitel.clear_screen()?;
+        self.send(C0::FF)?;
         Ok(())
     }
 
@@ -240,7 +249,6 @@ impl<S: MinitelRead + MinitelWrite> Backend for MinitelBackend<S> {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.minitel.flush()?;
         Ok(())
     }
 }
