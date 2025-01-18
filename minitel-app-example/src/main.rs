@@ -8,6 +8,10 @@ mod main;
 #[path = "main_axum.rs"]
 mod main;
 
+#[cfg(feature = "tcp")]
+#[path = "main_tcp.rs"]
+mod main;
+
 fn main() {
     crate::main::main();
 }

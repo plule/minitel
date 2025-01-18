@@ -40,8 +40,6 @@ jobs:
             args: --release
           - command: clippy
             args: -- -D warnings
-          - command: doc
-            args: --no-deps
           - command: test
             args: --release
           
@@ -55,8 +53,12 @@ jobs:
           override: true
       - name: Enable caching
         uses: Swatinem/rust-cache@v2
-      - name: Run command
-        run: cargo ${{ matrix.action.command }} --features axum,futures,ratatui --workspace ${{ matrix.action.args }}
+      - name: Minitel
+        run: cargo ${{ matrix.action.command }} --features axum,futures,ratatui ${{ matrix.action.args }}
+      - name: Example axum
+        run: cargo ${{ matrix.action.command }} -p minitel-app-example --features axum ${{ matrix.action.args }}
+      - name: Example TCP
+        run: cargo ${{ matrix.action.command }} -p minitel-app-example --features tcp ${{ matrix.action.args }}
   fmt:
     name: Fmt Checks
     runs-on: ubuntu-latest

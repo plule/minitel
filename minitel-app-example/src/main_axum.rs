@@ -45,6 +45,10 @@ pub async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    let address = std::env::args()
+        .nth(1)
+        .unwrap_or("127.0.0.1:3615".to_string());
+
     // build our application with some routes
     let app = Router::new()
         .route("/ws", any(ws_handler))
@@ -55,7 +59,7 @@ pub async fn main() {
         );
 
     // run it with hyper
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
     axum::serve(
         listener,

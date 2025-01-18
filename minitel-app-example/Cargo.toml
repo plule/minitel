@@ -32,10 +32,13 @@ tokio = { version = "1.43.0", features = ["rt", "net", "io-util", "macros"]}
 tower-http = { version = "0.6.2", features = ["trace"], optional = true}
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"],  optional = true}
 tracing = "0.1.41"
+tokio-util = { version = "0.7.13", optional = true, features = ["compat"]}
+futures = { version = "0.3.31", optional = true }
 
 [features]
 esp = ["minitel/esp", "dep:esp-idf-svc"]
 axum = ["minitel/axum", "tokio/rt-multi-thread", "dep:axum", "dep:tower-http", "dep:tracing-subscriber"]
+tcp = ["minitel/futures", "tokio/rt-multi-thread", "dep:tokio-util", "dep:futures", "dep:tracing-subscriber"]
 
 [build-dependencies]
 embuild = "0.32.0"
