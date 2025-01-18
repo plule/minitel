@@ -20,7 +20,7 @@ ratatui = { version = "0.29.0", default-features = false, features = [
 strum = "0.26.3"
 time = "0.3.37"
 tungstenite = { version = "0.26.1", optional = true }
-minitel = { version = "0.1.1", path = "..", features = ["ratatui"] }
+minitel = { version = "0.2.0", path = "..", features = ["ratatui"] }
 esp-idf-svc = { version = "0.49", features = [
     "critical-section",
     "embassy-time-driver",

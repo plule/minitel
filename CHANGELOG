@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Removed
+
+## [0.2.0] - 2025-01-18
+
+### Added
+
 - Async versions
 - Axum support
 
@@ -22,6 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tungsten ws support
 - minitel-ratatui, minitel-esp and minitel-ws crates
 
-## [0.1.0] - 2024-01-04
+## [0.1.0] - 2025-01-04
 
 Initial version
