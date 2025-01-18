@@ -3,11 +3,9 @@
 use std::io;
 
 use minitel::{
-    stum::{
-        videotex::{FunctionKey, UserInput},
-        Minitel, MinitelRead, MinitelWrite,
-    },
-    MinitelBackend,
+    prelude::*,
+    ratatui::MinitelBackend,
+    stum::videotex::{FunctionKey, StringMessage, UserInput, C0},
 };
 use ratatui::{
     layout::Flex,
@@ -20,6 +18,7 @@ use ratatui::{
         Block, Padding, Paragraph, Tabs, Wrap,
     },
 };
+use std::io::Cursor;
 use strum::{Display, EnumIter, FromRepr, IntoEnumIterator};
 use time::{Date, Duration, Month};
 use tui_big_text::{BigText, PixelSize};
@@ -46,29 +45,45 @@ impl Default for App {
 
 impl App {
     /// runs the application's main loop until the user quits
-    pub fn run<B: MinitelRead + MinitelWrite>(
+    pub async fn run<B: AsyncMinitelRead + AsyncMinitelWrite>(
         &mut self,
-        terminal: &mut Terminal<MinitelBackend<B>>,
+        minitel: &mut B,
     ) -> io::Result<()> {
         log::info!("Running App");
-        terminal.clear()?;
+        minitel.send(C0::FF).await?;
 
-        let loop_result = self.event_loop(terminal);
+        let loop_result = self.event_loop(minitel).await;
         if let Err(err) = loop_result {
             log::error!("Error in event loop: {:?}", err);
         }
-        terminal.clear()?;
+        minitel.send(C0::FF).await?;
+        minitel
+            .send(StringMessage("Au revoir !".to_string()))
+            .await?;
 
         Ok(())
     }
 
-    fn event_loop<B: MinitelRead + MinitelWrite>(
+    async fn event_loop<B: AsyncMinitelRead + AsyncMinitelReadWrite>(
         &mut self,
-        terminal: &mut Terminal<MinitelBackend<B>>,
+        minitel: &mut B,
     ) -> io::Result<()> {
+        // Prepare a write buffer for the sync->async bridge
+        let buffer: Vec<u8> = Vec::new();
+        let cursor: Cursor<Vec<u8>> = Cursor::new(buffer);
+        let backend = MinitelBackend::new(cursor);
+        let mut terminal = Terminal::new(backend)?;
         while !self.exit {
+            // Draw the frame to the buffer
             terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events(&mut terminal.backend_mut().minitel)?;
+            // Flush the buffer to the minitel
+            let cursor = &mut terminal.backend_mut().stream;
+            let buffer = cursor.get_mut();
+            minitel.write(buffer).await?;
+            buffer.clear();
+            cursor.set_position(0);
+            // Read the minitel input
+            self.handle_events(minitel).await?;
         }
         Ok(())
     }
@@ -77,11 +92,11 @@ impl App {
         frame.render_widget(self, frame.area());
     }
 
-    fn handle_events<B: MinitelRead + MinitelWrite>(
+    async fn handle_events<B: AsyncMinitelRead + AsyncMinitelReadWrite>(
         &mut self,
-        minitel: &mut Minitel<B>,
+        minitel: &mut B,
     ) -> io::Result<()> {
-        if let Ok(b) = minitel.read_s0_stroke() {
+        if let Ok(b) = minitel.read_s0_stroke().await {
             match b {
                 UserInput::FunctionKey(FunctionKey::Suite) => {
                     self.selected_tab = self.selected_tab.next()

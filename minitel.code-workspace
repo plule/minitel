@@ -5,15 +5,13 @@
 		}
 	],
 	"settings": {
-		"rust-analyzer.cargo.allTargets": false,
-		"rust-analyzer.check.extraArgs": [
-			"--exclude=minitel-esp*"
-		],
-		"rust-analyzer.files.excludeDirs": [
-			"minitel-esp"
-		],
+		"rust-analyzer.cargo.allTargets": true,
+		"rust-analyzer.check.extraArgs": [],
+		"rust-analyzer.files.excludeDirs": [],
 		"rust-analyzer.cargo.features": [
-			"ws"
+			"axum",
+			"futures",
+			"espdoc"
 		],
 	}
 }

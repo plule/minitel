@@ -4,8 +4,8 @@ mod app;
 #[path = "main_esp.rs"]
 mod main;
 
-#[cfg(feature = "ws")]
-#[path = "main_ws.rs"]
+#[cfg(feature = "axum")]
+#[path = "main_axum.rs"]
 mod main;
 
 fn main() {

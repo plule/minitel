@@ -12,44 +12,37 @@ keywords = ["minitel", "videotex", "teletel"]
 exclude = [".gitignore", "*.code-workspace", ".github", ".embuild", ".vscode"]
 
 [workspace]
-members = [
-    "minitel-ratatui",
-    "minitel-stum",
-    "minitel-ws",
-    "minitel-esp",
-    "minitel-app-example",
-]
+members = ["minitel-app-example"]
 
 
 [dependencies]
-minitel-stum = { version = "0.1.1", path = "minitel-stum" }
-minitel-ws = { version = "0.1.1", path = "minitel-ws", optional = true }
-minitel-esp = { version = "0.1.1", path = "minitel-esp", optional = true, default-features = false }
-minitel-ratatui = { version = "0.1.1", path = "minitel-ratatui", optional = true }
 ratatui = { version = "0.29.0", optional = true, default-features = false }
-tungstenite = { version = "0.26.1", optional = true, default-features = false }
+axum = { version = "0.8.1", default-features = false, features = [
+    "ws",
+], optional = true }
+esp-idf-hal = { version = "0.44.1", optional = true }
+num_enum = "0.7.3"
+smallvec = "1.13.2"
+unicode-normalization = "0.1.24"
+log = "0.4.22"
+futures = { version = "0.3.31", optional = true }
 
 [features]
-default = ["esp_implem"]
-ws = ["dep:tungstenite", "dep:minitel-ws"]
-esp = ["dep:minitel-esp"]
-esp_implem = ["minitel-esp?/esp"]
-ratatui = ["dep:ratatui", "dep:minitel-ratatui"]
-docsrs = ["ws", "ratatui", "esp"]
+default = []
+esp = ["dep:esp-idf-hal"]
+espdoc = []
+ratatui = ["dep:ratatui"]
+docsrs = ["ratatui", "axum", "espdoc", "futures"]
+axum = ["dep:axum"]
+futures = ["dep:futures"]
 
 [dev-dependencies]
 env_logger = "0.11.6"
 log = "0.4.22"
 tungstenite = "0.26.1"
 ratatui = { version = "0.29.0", default-features = false }
-
-[[example]]
-name = "ratatui"
-required-features = ["ratatui", "ws"]
-
-[[example]]
-name = "websocket"
-required-features = ["ws"]
+tokio = { version = "1.43.0", features = ["full"] }
+futures = "0.3.31"
 
 [package.metadata.docs.rs]
 no-default-features = true

@@ -56,7 +56,7 @@ jobs:
       - name: Enable caching
         uses: Swatinem/rust-cache@v2
       - name: Run command
-        run: cargo ${{ matrix.action.command }} --features ws,ratatui --workspace --exclude minitel-esp ${{ matrix.action.args }}
+        run: cargo ${{ matrix.action.command }} --features axum,futures,ratatui --workspace ${{ matrix.action.args }}
   fmt:
     name: Fmt Checks
     runs-on: ubuntu-latest
@@ -75,15 +75,11 @@ jobs:
   docs:
     name: Check doc generation
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        package: [minitel, minitel-esp, minitel-stum, minitel-ws, minitel-ratatui]
     env:
       RUSTDOCFLAGS: -Dwarnings
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - uses: dtolnay/install@cargo-docs-rs
-      - run: cargo docs-rs -p ${{ matrix.package }}
+      - run: cargo docs-rs -p minitel
       

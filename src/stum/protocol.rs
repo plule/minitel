@@ -7,13 +7,13 @@ use std::fmt::{Display, Formatter};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::videotex;
+use crate::{stum::videotex, MinitelMessage};
 
 /// Emission code of the Minitel modules
 ///
 /// <https://jbellue.github.io/stum1b/#2-6-1>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum RoutingTx {
     Screen = 0x50,
     Keyboard = 0x51,
@@ -37,7 +37,7 @@ pub enum RoutingRx {
 ///
 /// <https://jbellue.github.io/stum1b/#2-6-2>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum Protocol {
     /// Message with one parameter
     Pro1 = 0x39,
@@ -45,6 +45,54 @@ pub enum Protocol {
     Pro2 = 0x3A,
     /// Message with three parameters
     Pro3 = 0x3B,
+}
+
+pub enum ProtocolMessage {
+    Pro1(Pro1),
+    Pro2(Pro2, u8),
+    Pro3(Pro3, u8, u8),
+}
+
+impl MinitelMessage for ProtocolMessage {
+    fn message(self) -> Vec<u8> {
+        match self {
+            ProtocolMessage::Pro1(x) => {
+                vec![videotex::C0::ESC.into(), Protocol::Pro1.into(), x.into()]
+            }
+            ProtocolMessage::Pro2(x, y) => {
+                vec![videotex::C0::ESC.into(), Protocol::Pro2.into(), x.into(), y]
+            }
+            ProtocolMessage::Pro3(x, y, z) => vec![
+                videotex::C0::ESC.into(),
+                Protocol::Pro3.into(),
+                x.into(),
+                y,
+                z,
+            ],
+        }
+    }
+}
+
+impl ProtocolMessage {
+    pub fn aiguillage(enable: bool, from: RoutingTx, to: RoutingRx) -> Self {
+        ProtocolMessage::Pro3(
+            if enable {
+                Pro3::RoutingOn
+            } else {
+                Pro3::RoutingOff
+            },
+            to.into(),
+            from.into(),
+        )
+    }
+
+    pub fn set_speed(speed: Baudrate) -> Self {
+        ProtocolMessage::Pro2(Pro2::Prog, speed.code())
+    }
+
+    pub fn function_mode(mode: FunctionMode, enable: bool) -> Self {
+        ProtocolMessage::Pro2(if enable { Pro2::Start } else { Pro2::Stop }, mode.into())
+    }
 }
 
 impl Protocol {
@@ -92,7 +140,7 @@ impl Protocol {
 
 /// Protocol messages with one parameter
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum Pro1 {
     EnqSpeed = 0x74,
     /// <https://jbellue.github.io/stum1b/#2-6-6>
@@ -101,7 +149,7 @@ pub enum Pro1 {
 
 /// Protocol messages with two parameters
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum Pro2 {
     RoutingTo = 0x62,
     Start = 0x69,
@@ -111,7 +159,7 @@ pub enum Pro2 {
 
 /// Protocol messages with three parameters
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum Pro3 {
     RoutingOn = 0x61,
     RoutingOff = 0x60,
@@ -119,7 +167,7 @@ pub enum Pro3 {
 
 /// Protocol responses with two parameter
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum Pro2Resp {
     RepStatus = 0x73,
     QuerySpeedAnswer = 0x75,
@@ -127,7 +175,7 @@ pub enum Pro2Resp {
 
 /// Protocol responses with three parameter
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum Pro3Resp {
     RoutingFrom = 0x63,
 }
@@ -136,7 +184,7 @@ pub enum Pro3Resp {
 ///
 /// <https://jbellue.github.io/stum1b/#2-6-11>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
 pub enum FunctionMode {
     /// Mode Rouleau (screen scrolling)
     Rouleau = 0x43,
