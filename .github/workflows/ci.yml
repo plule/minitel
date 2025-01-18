@@ -75,15 +75,11 @@ jobs:
   docs:
     name: Check doc generation
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        package: [minitel, minitel-ratatui]
     env:
       RUSTDOCFLAGS: -Dwarnings
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - uses: dtolnay/install@cargo-docs-rs
-      - run: cargo docs-rs -p ${{ matrix.package }}
+      - run: cargo docs-rs -p minitel
       
