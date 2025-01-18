@@ -1,7 +1,7 @@
-use log::{debug, error, info};
-use minitel::stum::{
-    protocol::{Baudrate, RoutingRx, RoutingTx},
-    AsyncMinitelReadWrite, AsyncMinitelReadWriteBaudrate,
+use log::{error, info};
+use minitel::{
+    prelude::*,
+    stum::protocol::{Baudrate, RoutingRx, RoutingTx},
 };
 use std::thread::sleep;
 
@@ -36,7 +36,7 @@ pub fn main() {
 
 async fn async_main() -> std::io::Result<()> {
     // Initialize the minitel
-    let mut minitel = minitel::esp_minitel_uart2().unwrap();
+    let mut minitel = minitel::esp::esp_minitel_uart2().unwrap();
     minitel.search_speed().await.unwrap();
     minitel.set_speed(Baudrate::B9600).await.unwrap();
     minitel

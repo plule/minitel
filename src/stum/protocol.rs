@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::stum::{videotex, Message};
+use crate::{stum::videotex, MinitelMessage};
 
 /// Emission code of the Minitel modules
 ///
@@ -53,7 +53,7 @@ pub enum ProtocolMessage {
     Pro3(Pro3, u8, u8),
 }
 
-impl Message for ProtocolMessage {
+impl MinitelMessage for ProtocolMessage {
     fn message(self) -> Vec<u8> {
         match self {
             ProtocolMessage::Pro1(x) => {

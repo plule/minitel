@@ -16,13 +16,10 @@ It includes an integration of [ratatui](https://ratatui.rs), a library to write 
 
 The `minitel` crate contains everything needed for development, though most its feature are behind feature gates. Its module are:
 
-- [stum]: Contains the core functionality, exposing the specificitation described in STUM1B (Spécifications Techniques d’Utilisation du Minitel). Gated behind the `stum` feature.
-- [ws]: Websocket integration. Gated behind the `ws` feature.
+- [stum]: Contains the core functionality, exposing the specificitation described in STUM1B (Spécifications Techniques d’Utilisation du Minitel).
+- [axum]: Axum websocket integration. Gated behind the `ws` feature.
 - [esp]: ESP32 integration. Gated behind the `esp` feature.
 - [ratatui]: Ratatui backend module, compatible with both the previous integration. Gated behind the `ratatui` feature.
-
-These modules are re-export from their respective crates [minitel_stum], [minitel_ws], [minitel_esp] and [minitel_ratatui], with some additional glue
-code for common scenarios.
 
 Lastly, [minitel-app-example] is a demonstration application that can be built both as a server serving a websocket, or as an embedded ESP32 firmware.
 
@@ -36,7 +33,7 @@ It does not include any management for the "mixte" or "téléinformatique" modes
 
 This crates is a sample app that can be built into a websocket server or an embedded ESP32 plugged on the minitel serial port.
 
-Building for a websocket server: `cargo build -p minitel-app-example --features ws`.
+Building for a websocket server: `cargo build -p minitel-app-example --features axum`.
 
 Building for ESP32: `cargo +esp --config minitel-app-example/cargo-config-esp.toml build -p minitel-app-example --features=esp`.
 Targetting an ESP32 requires to have [setup an environment ready for ESP32 using the standard library](https://docs.esp-rs.org/book/introduction.html).

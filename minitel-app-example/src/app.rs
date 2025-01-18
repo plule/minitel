@@ -3,11 +3,9 @@
 use std::io;
 
 use minitel::{
-    stum::{
-        videotex::{FunctionKey, StringMessage, UserInput, C0},
-        AsyncMinitelRead, AsyncMinitelReadWrite, AsyncMinitelWrite,
-    },
-    MinitelBackend,
+    prelude::*,
+    ratatui::MinitelBackend,
+    stum::videotex::{FunctionKey, StringMessage, UserInput, C0},
 };
 use ratatui::{
     layout::Flex,

@@ -3,17 +3,14 @@ pub use esp::*;
 
 #[cfg(feature = "esp")]
 mod esp {
+    use crate::{AsyncMinitelBaudrateControl, AsyncMinitelRead, AsyncMinitelWrite};
     use esp_idf_hal::{
         gpio::AnyIOPin,
-        io::{
-            asynch::{Read, Write},
-            Read as OtherRead,
-        },
+        io::asynch::{Read, Write},
         sys::EspError,
         uart,
         units::Hertz,
     };
-    use minitel_stum::{AsyncMinitelBaudrateControl, AsyncMinitelRead, AsyncMinitelWrite};
     use std::{
         borrow::BorrowMut,
         io::{Error, ErrorKind, Result},
@@ -100,7 +97,7 @@ mod esp {
     where
         T: BorrowMut<uart::UartDriver<'a>>,
     {
-        fn set_baudrate(&mut self, baudrate: minitel_stum::protocol::Baudrate) -> Result<()> {
+        fn set_baudrate(&mut self, baudrate: crate::stum::protocol::Baudrate) -> Result<()> {
             self.uart
                 .driver_mut()
                 .change_baudrate(baudrate.hertz())

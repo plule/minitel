@@ -1,7 +1,8 @@
-use crate::stum::{IntoSequence, Message};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use smallvec::SmallVec;
 use unicode_normalization::UnicodeNormalization;
+
+use crate::MinitelMessage;
 
 /// Virtual keystroke sequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -18,7 +19,7 @@ pub enum UserInput {
 
 pub struct StringMessage(pub String);
 
-impl Message for StringMessage {
+impl MinitelMessage for StringMessage {
     fn message(self) -> Vec<u8> {
         self.0
             .chars()
@@ -29,7 +30,7 @@ impl Message for StringMessage {
 }
 
 pub struct SetPosition(pub u8, pub u8);
-impl Message for SetPosition {
+impl MinitelMessage for SetPosition {
     fn message(self) -> Vec<u8> {
         vec![C0::US.into(), 0x40 + self.1, 0x40 + self.0 + 1]
     }
@@ -83,7 +84,7 @@ pub enum C0 {
     US = 0x1F,
 }
 
-impl Message for C0 {
+impl MinitelMessage for C0 {
     fn message(self) -> Vec<u8> {
         vec![self.into()]
     }
@@ -146,13 +147,7 @@ pub enum C1 {
     EnqCursor = 0x61,
 }
 
-impl IntoSequence<2> for C1 {
-    fn sequence(self) -> [u8; 2] {
-        [C0::ESC.into(), self.into()]
-    }
-}
-
-impl Message for C1 {
+impl MinitelMessage for C1 {
     fn message(self) -> Vec<u8> {
         vec![C0::ESC.into(), self.into()]
     }
@@ -170,13 +165,7 @@ impl From<G0> for u8 {
     }
 }
 
-impl IntoSequence<1> for G0 {
-    fn sequence(self) -> [u8; 1] {
-        [self.0]
-    }
-}
-
-impl Message for G0 {
+impl MinitelMessage for G0 {
     fn message(self) -> Vec<u8> {
         vec![self.into()]
     }
@@ -241,7 +230,7 @@ impl From<G1> for u8 {
     }
 }
 
-impl Message for G1 {
+impl MinitelMessage for G1 {
     fn message(self) -> Vec<u8> {
         vec![self.into()]
     }
@@ -363,13 +352,7 @@ pub enum G2 {
     Beta = 0x7B,
 }
 
-impl IntoSequence<2> for G2 {
-    fn sequence(self) -> [u8; 2] {
-        [C0::SS2.into(), self.into()]
-    }
-}
-
-impl Message for G2 {
+impl MinitelMessage for G2 {
     fn message(self) -> Vec<u8> {
         vec![C0::SS2.into(), self.into()]
     }
@@ -469,7 +452,7 @@ pub enum SIChar {
     G2(G2),
 }
 
-impl Message for SIChar {
+impl MinitelMessage for SIChar {
     fn message(self) -> Vec<u8> {
         match self {
             SIChar::G0(g0) => g0.message(),
@@ -523,13 +506,7 @@ pub enum FunctionKey {
     ConnexionFin = 0x49,
 }
 
-impl IntoSequence<2> for FunctionKey {
-    fn sequence(self) -> [u8; 2] {
-        [C0::Sep.into(), self.into()]
-    }
-}
-
-impl Message for FunctionKey {
+impl MinitelMessage for FunctionKey {
     fn message(self) -> Vec<u8> {
         vec![C0::Sep.into(), self.into()]
     }

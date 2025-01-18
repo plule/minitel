@@ -5,9 +5,9 @@ use backend::WindowSize;
 use ratatui::backend::Backend;
 use ratatui::prelude::*;
 
-use crate::stum::{
-    videotex::{GrayScale, SIChar, SetPosition, C0, C1, G0, G1},
-    Message,
+use crate::{
+    stum::videotex::{GrayScale, SIChar, SetPosition, C0, C1, G0, G1},
+    MinitelMessage,
 };
 
 /// Keep track of the contextual data
@@ -54,7 +54,7 @@ impl<S: Write> MinitelBackend<S> {
 
     fn send<T>(&mut self, message: T) -> std::io::Result<()>
     where
-        T: Message,
+        T: MinitelMessage,
     {
         self.stream.write_all(&message.message())
     }
