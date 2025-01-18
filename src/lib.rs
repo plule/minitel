@@ -3,10 +3,8 @@
 
 /// Core Minitel types and traits
 ///
-/// The stum crate (Spécifications Techniques d'Utilisation du Minitel) expooses parts of the STUM1B specification.
-pub mod stum {
-    pub use minitel_stum::*;
-}
+/// The stum module (Spécifications Techniques d'Utilisation du Minitel) exposes parts of the STUM1B specification.
+pub mod stum;
 
 #[doc(inline)]
 pub use stum::Minitel;
@@ -26,13 +24,11 @@ pub mod esp;
 /// Exposes a backend for ratatui, a terminal UI library. This helps writing interactive
 /// applications for the Minitel.
 #[cfg(feature = "ratatui")]
-pub mod ratatui {
-    pub use minitel_ratatui::*;
-}
+pub mod ratatui;
 
 #[cfg(feature = "ratatui")]
 #[doc(inline)]
-pub use minitel_ratatui::MinitelBackend;
+pub use ratatui::MinitelBackend;
 
 #[cfg(feature = "esp")]
 #[doc(inline)]

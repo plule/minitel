@@ -1432,10 +1432,11 @@ dependencies = [
  "env_logger",
  "esp-idf-hal",
  "log",
- "minitel-ratatui",
- "minitel-stum",
+ "num_enum",
  "ratatui",
+ "smallvec",
  "tungstenite",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -1458,24 +1459,6 @@ dependencies = [
  "tracing-subscriber",
  "tui-big-text",
  "tungstenite",
-]
-
-[[package]]
-name = "minitel-ratatui"
-version = "0.1.1"
-dependencies = [
- "minitel-stum",
- "ratatui",
-]
-
-[[package]]
-name = "minitel-stum"
-version = "0.1.1"
-dependencies = [
- "log",
- "num_enum",
- "smallvec",
- "unicode-normalization",
 ]
 
 [[package]]

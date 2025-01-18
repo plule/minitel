@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::{videotex, Message};
+use crate::stum::{videotex, Message};
 
 /// Emission code of the Minitel modules
 ///

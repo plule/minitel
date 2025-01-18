@@ -1,4 +1,4 @@
-use crate::{IntoSequence, Message};
+use crate::stum::{IntoSequence, Message};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use smallvec::SmallVec;
 use unicode_normalization::UnicodeNormalization;

@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 use std::io::{ErrorKind, Result};
 
+use crate::stum::{AsyncMinitelRead, AsyncMinitelWrite};
 use axum::extract::ws::WebSocket;
-use minitel_stum::{AsyncMinitelRead, AsyncMinitelWrite};
 
 /// A minitel port backed by an axum websocket
 pub struct Port {

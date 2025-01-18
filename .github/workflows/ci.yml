@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [minitel, minitel-stum, minitel-ratatui]
+        package: [minitel, minitel-ratatui]
     env:
       RUSTDOCFLAGS: -Dwarnings
     steps:

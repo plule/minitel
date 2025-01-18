@@ -6,7 +6,7 @@
 pub mod protocol;
 pub mod videotex;
 
-use crate::{
+use crate::stum::{
     protocol::{
         Baudrate, FunctionMode, Pro1, Pro2, Pro2Resp, Pro3, Pro3Resp, Protocol, Rom, RoutingRx,
         RoutingTx,
