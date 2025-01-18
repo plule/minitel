@@ -9,9 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Async versions
+- Axum support
+
 ### Changed
 
+- Not anymore split in many crates
+
 ### Removed
+
+- Sync version
+- Tungsten ws support
+- minitel-ratatui, minitel-esp and minitel-ws crates
 
 ## [0.1.0] - 2024-01-04
 
