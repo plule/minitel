@@ -9,9 +9,9 @@
 		"rust-analyzer.check.extraArgs": [],
 		"rust-analyzer.files.excludeDirs": [],
 		"rust-analyzer.cargo.features": [
-			"axum",
-			"futures",
-			"espdoc"
+			"tcp",
+			//"futures",
+			//"espdoc"
 		],
 	}
 }

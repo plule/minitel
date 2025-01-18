@@ -34,9 +34,24 @@ It does not include any management for the "mixte" or "téléinformatique" modes
 
 This crate is a sample app that can be built into a websocket server or an embedded ESP32 plugged on the minitel serial port.
 
-Building for a websocket server: `cargo build -p minitel-app-example --features axum`.
+### TCP Socket
 
-Building for ESP32: `cargo +esp --config minitel-app-example/cargo-config-esp.toml build -p minitel-app-example --features=esp`.
+Creates a simple TCP listener.
+
+`cargo run -p minitel-app-example --features tcp -- 0.0.0.0:3000`
+
+### Axum WebSocket
+
+Creates a web server serving a minitel websocket on `/ws`.
+
+`cargo run -p minitel-app-example --features axum -- 0.0.0.0:3000`.
+
+### ESP32
+
+Creates a firmware running on ESP32, assuming the same pinout as the [iodeo dongle](https://www.tindie.com/products/iodeo/minitel-esp32-dongle/).
+
+`cargo +esp --config minitel-app-example/cargo-config-esp.toml run -p minitel-app-example --features=esp -- --monitor`.
+
 Targetting an ESP32 requires to have [setup an environment ready for ESP32 using the standard library](https://docs.esp-rs.org/book/introduction.html).
 
 ## Ratatui integration
