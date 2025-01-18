@@ -12,11 +12,12 @@ In its current state, it can be used to:
 
 It includes an integration of [ratatui](https://ratatui.rs), a library to write console applications.
 
-## Crates and modules
+## Modules
 
 The `minitel` crate contains everything needed for development, though most its feature are behind feature gates. Its module are:
 
 - [stum]: Contains the core functionality, exposing the specificitation described in STUM1B (Spécifications Techniques d’Utilisation du Minitel).
+- [futures]: Generic integration for the `futures` crate. Gated behind the `futures` feature.
 - [axum]: Axum websocket integration. Gated behind the `ws` feature.
 - [esp]: ESP32 integration. Gated behind the `esp` feature.
 - [ratatui]: Ratatui backend module, compatible with both the previous integration. Gated behind the `ratatui` feature.
@@ -25,13 +26,13 @@ Lastly, [minitel-app-example] is a demonstration application that can be built b
 
 ## Scope and limitations
 
-These crates are focused on the Télétel Vidéotex standard, which is the one specific to the Minitel.
+This crate is focused on the Télétel Vidéotex standard, which is the one specific to the Minitel.
 
 It does not include any management for the "mixte" or "téléinformatique" modes.
 
 ## Building `minitel-app-example`
 
-This crates is a sample app that can be built into a websocket server or an embedded ESP32 plugged on the minitel serial port.
+This crate is a sample app that can be built into a websocket server or an embedded ESP32 plugged on the minitel serial port.
 
 Building for a websocket server: `cargo build -p minitel-app-example --features axum`.
 

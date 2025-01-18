@@ -79,7 +79,7 @@ impl App {
             // Flush the buffer to the minitel
             let cursor = &mut terminal.backend_mut().stream;
             let buffer = cursor.get_mut();
-            minitel.write(&buffer).await?;
+            minitel.write(buffer).await?;
             buffer.clear();
             cursor.set_position(0);
             // Read the minitel input

@@ -26,7 +26,7 @@ pub mod futures;
 /// ESP32 integration
 ///
 /// Implements the necessary traits to use a Minitel terminal over an ESP32 microcontroller.
-#[cfg(feature = "esp")]
+#[cfg(any(feature = "esp", feature = "espdoc"))]
 pub mod esp;
 
 /// Ratatui integration

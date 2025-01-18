@@ -30,8 +30,9 @@ futures = { version = "0.3.31", optional = true }
 [features]
 default = []
 esp = ["dep:esp-idf-hal"]
+espdoc = []
 ratatui = ["dep:ratatui"]
-docsrs = ["ratatui"]
+docsrs = ["ratatui", "axum", "espdoc", "futures"]
 axum = ["dep:axum"]
 futures = ["dep:futures"]
 

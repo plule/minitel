@@ -10,7 +10,8 @@
 		"rust-analyzer.files.excludeDirs": [],
 		"rust-analyzer.cargo.features": [
 			"axum",
-			"futures"
+			"futures",
+			"espdoc"
 		],
 	}
 }

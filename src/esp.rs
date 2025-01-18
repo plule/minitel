@@ -118,7 +118,89 @@ mod esp {
 }
 
 /// Doc shenanigans: stubs for ESP32 integration documentation when the ESP toolchain is not available
-#[cfg(not(feature = "esp"))]
+#[cfg(feature = "espdoc")]
 mod esp {
-    // todo
+    use std::borrow::BorrowMut;
+    use std::io::Result;
+
+    use crate::{AsyncMinitelBaudrateControl, AsyncMinitelRead, AsyncMinitelWrite};
+
+    #[doc(hidden)]
+    pub mod uart {
+        pub struct UartConfig;
+
+        pub struct UartDriver<'a> {
+            _phantom: core::marker::PhantomData<&'a ()>,
+        }
+
+        pub struct AsyncUartDriver<'a, T> {
+            _phantom: core::marker::PhantomData<&'a T>,
+        }
+    }
+    #[doc(hidden)]
+    pub struct EspError;
+
+    /// Serial port configuration when the minitel starts
+    pub fn default_uart_config() -> uart::UartConfig {
+        unimplemented!()
+    }
+
+    /// Create a new Minitel instance using the port UART 2.
+    ///
+    /// This is the port used in the ESP32 minitel development board from iodeo.
+    pub fn esp_minitel_uart2(
+    ) -> core::result::Result<Port<'static, uart::UartDriver<'static>>, EspError> {
+        unimplemented!()
+    }
+
+    pub struct Port<'a, T>
+    where
+        T: BorrowMut<uart::UartDriver<'a>>,
+    {
+        pub uart: uart::AsyncUartDriver<'a, T>,
+    }
+
+    impl<'a, T> Port<'a, T>
+    where
+        T: BorrowMut<uart::UartDriver<'a>>,
+    {
+        pub fn new(uart: uart::AsyncUartDriver<'a, T>) -> Self {
+            Port { uart }
+        }
+    }
+
+    impl<'a, T> AsyncMinitelRead for Port<'a, T>
+    where
+        T: BorrowMut<uart::UartDriver<'a>>,
+    {
+        async fn read(&mut self, _data: &mut [u8]) -> Result<()> {
+            unimplemented!()
+        }
+    }
+
+    impl<'a, T> AsyncMinitelWrite for Port<'a, T>
+    where
+        T: BorrowMut<uart::UartDriver<'a>>,
+    {
+        async fn write(&mut self, _data: &[u8]) -> Result<()> {
+            unimplemented!()
+        }
+
+        async fn flush(&mut self) -> Result<()> {
+            unimplemented!()
+        }
+    }
+
+    impl<'a, T> AsyncMinitelBaudrateControl for Port<'a, T>
+    where
+        T: BorrowMut<uart::UartDriver<'a>>,
+    {
+        fn set_baudrate(&mut self, _baudrate: crate::stum::protocol::Baudrate) -> Result<()> {
+            unimplemented!()
+        }
+
+        fn read_byte_blocking(&mut self) -> Result<u8> {
+            unimplemented!()
+        }
+    }
 }
