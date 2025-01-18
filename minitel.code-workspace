@@ -5,11 +5,12 @@
 		}
 	],
 	"settings": {
-		"rust-analyzer.cargo.allTargets": false,
+		"rust-analyzer.cargo.allTargets": true,
 		"rust-analyzer.check.extraArgs": [],
 		"rust-analyzer.files.excludeDirs": [],
 		"rust-analyzer.cargo.features": [
-			"axum"
+			"axum",
+			"futures"
 		],
 	}
 }

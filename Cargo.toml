@@ -25,6 +25,7 @@ num_enum = "0.7.3"
 smallvec = "1.13.2"
 unicode-normalization = "0.1.24"
 log = "0.4.22"
+futures = { version = "0.3.31", optional = true }
 
 [features]
 default = []
@@ -32,16 +33,15 @@ esp = ["dep:esp-idf-hal"]
 ratatui = ["dep:ratatui"]
 docsrs = ["ratatui"]
 axum = ["dep:axum"]
+futures = ["dep:futures"]
 
 [dev-dependencies]
 env_logger = "0.11.6"
 log = "0.4.22"
 tungstenite = "0.26.1"
 ratatui = { version = "0.29.0", default-features = false }
-
-[[example]]
-name = "ratatui"
-required-features = ["ratatui", "ws"]
+tokio = { version = "1.43.0", features = ["full"] }
+futures = "0.3.31"
 
 [package.metadata.docs.rs]
 no-default-features = true

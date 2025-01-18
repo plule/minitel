@@ -56,7 +56,7 @@ jobs:
       - name: Enable caching
         uses: Swatinem/rust-cache@v2
       - name: Run command
-        run: cargo ${{ matrix.action.command }} --features ws,ratatui --workspace ${{ matrix.action.args }}
+        run: cargo ${{ matrix.action.command }} --features axum,futures,ratatui --workspace ${{ matrix.action.args }}
   fmt:
     name: Fmt Checks
     runs-on: ubuntu-latest
