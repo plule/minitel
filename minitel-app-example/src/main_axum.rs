@@ -14,8 +14,11 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 
-use std::{collections::HashMap, net::SocketAddr};
-use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+use std::{collections::HashMap, net::SocketAddr, path::PathBuf};
+use tower_http::{
+    services::ServeDir,
+    trace::{DefaultMakeSpan, TraceLayer},
+};
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -31,11 +34,14 @@ struct Args {
     #[clap(short, long, default_value = "127.0.0.1:3615")]
     bind: String,
     /// Public host for redirections. Must include the port, no http://
-    #[clap(short, long)]
-    minipavi_host: String,
+    #[clap(short, long, default_value = None)]
+    minipavi_host: Option<String>,
     /// Minipavi protocol, either http or https
     #[clap(long, default_value = "http")]
     minipavi_proto: String,
+    /// Open the browser on startup
+    #[clap(long)]
+    open: bool,
 }
 
 #[tokio::main]
@@ -50,16 +56,29 @@ pub async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    // build our application with some routes
-    let app = Router::new()
+    let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
+
+    let mut app = Router::new()
+        // web ui with the emulator
+        .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         // websocket route
-        .route("/ws", any(ws_handler))
+        .route("/ws", any(ws_handler));
+    if let Some(_) = args.minipavi_host.as_ref() {
         // minipavi api route
-        .route("/minipavi", post(minipavi))
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::default().include_headers(true)),
-        );
+        app = app.route("/minipavi", post(minipavi));
+    }
+
+    // build our application with some routes
+    app = app.layer(
+        TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::default().include_headers(true)),
+    );
+
+    if args.open {
+        // Open the browser on startup
+        if let Err(e) = open::that(format!("http://{}", args.bind)) {
+            warn!("Failed to open the browser: {}", e);
+        }
+    }
 
     info!("Listening on {}", args.bind);
     let listener = tokio::net::TcpListener::bind(args.bind).await.unwrap();
@@ -100,12 +119,16 @@ async fn minipavi(Json(payload): Json<PasserelleMessage>) -> (StatusCode, Json<S
                 content: base64::prelude::BASE64_STANDARD.encode(""),
                 context: "context".to_string(),
                 echo: "on".to_string(),
-                next: format!("{}://{}/minipavi", args.minipavi_proto, args.minipavi_host),
+                next: format!(
+                    "{}://{}/minipavi",
+                    args.minipavi_proto,
+                    args.minipavi_host.as_ref().unwrap()
+                ),
                 directcall: "no".to_string(),
                 command: Command {
                     name: "connectToWs".to_string(),
                     param: [
-                        ("host", args.minipavi_host.as_str()),
+                        ("host", args.minipavi_host.unwrap().as_str()),
                         ("key", ""),
                         ("path", "/ws"),
                         ("echo", "on"),
