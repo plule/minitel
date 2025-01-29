@@ -63,7 +63,7 @@ pub async fn main() {
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         // websocket route
         .route("/ws", any(ws_handler));
-    if let Some(_) = args.minipavi_host.as_ref() {
+    if args.minipavi_host.is_some() {
         // minipavi api route
         app = app.route("/minipavi", post(minipavi));
     }
@@ -110,11 +110,11 @@ async fn ws_handler(
 async fn minipavi(Json(payload): Json<PasserelleMessage>) -> (StatusCode, Json<ServiceMessage>) {
     let args = Args::parse();
 
-    let rep;
-    match payload.pavi.fctn.as_str() {
+    //let rep;
+    let rep = match payload.pavi.fctn.as_str() {
         "DIRECTCNX" => {
             // Initial connection, redirect to the websocket
-            rep = ServiceMessage {
+            ServiceMessage {
                 version: "1".to_string(),
                 content: base64::prelude::BASE64_STANDARD.encode(""),
                 context: "context".to_string(),
@@ -139,11 +139,11 @@ async fn minipavi(Json(payload): Json<PasserelleMessage>) -> (StatusCode, Json<S
                     .into_iter()
                     .collect(),
                 },
-            };
+            }
         }
         "DIRECTCALLENDED" | "FIN" => {
             // Call with the websocket ended, send the exit command
-            rep = ServiceMessage {
+            ServiceMessage {
                 version: "1".to_string(),
                 content: base64::prelude::BASE64_STANDARD.encode(""),
                 context: "context".to_string(),
@@ -154,12 +154,12 @@ async fn minipavi(Json(payload): Json<PasserelleMessage>) -> (StatusCode, Json<S
                     name: "libCnx".to_string(),
                     param: HashMap::new(),
                 },
-            };
+            }
         }
         _ => {
             // Unknown function, send the exit command
             error!("Unknown function {}", payload.pavi.fctn);
-            rep = ServiceMessage {
+            ServiceMessage {
                 version: "1".to_string(),
                 content: base64::prelude::BASE64_STANDARD.encode(""),
                 context: "context".to_string(),
@@ -170,9 +170,9 @@ async fn minipavi(Json(payload): Json<PasserelleMessage>) -> (StatusCode, Json<S
                     name: "libCnx".to_string(),
                     param: HashMap::new(),
                 },
-            };
+            }
         }
-    }
+    };
     (StatusCode::OK, rep.into())
 }
 
