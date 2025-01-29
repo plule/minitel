@@ -34,10 +34,14 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"],  optional 
 tracing = "0.1.41"
 tokio-util = { version = "0.7.13", optional = true, features = ["compat"]}
 futures = { version = "0.3.31", optional = true }
+serde = { version = "1.0.217", features = ["derive"], optional = true}
+serde_json = { version = "1.0.136", optional = true }
+base64 = { version = "0.22.1", optional = true }
+clap = { version = "4.5.18", optional = true, features = ["derive"] }
 
 [features]
 esp = ["minitel/esp", "dep:esp-idf-svc"]
-axum = ["minitel/axum", "tokio/rt-multi-thread", "dep:axum", "dep:tower-http", "dep:tracing-subscriber"]
+axum = ["minitel/axum", "tokio/rt-multi-thread", "dep:axum", "dep:tower-http", "dep:tracing-subscriber", "dep:serde", "dep:serde_json", "dep:base64", "dep:clap"]
 tcp = ["minitel/futures", "tokio/rt-multi-thread", "dep:tokio-util", "dep:futures", "dep:tracing-subscriber"]
 
 [build-dependencies]
