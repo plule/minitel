@@ -10,8 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Emulator and minipavi API in the axum example
+- Fill widget
 
 ### Changed
+
+- Render repeated characters with REP
 
 ### Removed
 

@@ -64,6 +64,7 @@ pub enum C0 {
     DLE = 0x10,
     /// Show cursor
     Con = 0x11,
+    /// Repetition
     Rep = 0x12,
     Sep = 0x13,
     /// Hide cursor
@@ -551,6 +552,16 @@ impl GrayScale {
             GrayScale::Gray90 => C1::BgYellow,
             GrayScale::White => C1::BgWhite,
         }
+    }
+}
+
+/// Repeat the character
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Repeat(pub u8);
+
+impl MinitelMessage for Repeat {
+    fn message(self) -> Vec<u8> {
+        vec![C0::Rep.into(), 0x40 + self.0]
     }
 }
 

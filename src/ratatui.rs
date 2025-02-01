@@ -2,11 +2,11 @@ use std::io::Write;
 
 use backend::WindowSize;
 
-use ratatui::backend::Backend;
 use ratatui::prelude::*;
+use ratatui::{backend::Backend, buffer::Cell};
 
 use crate::{
-    stum::videotex::{GrayScale, SIChar, SetPosition, C0, C1, G0, G1},
+    stum::videotex::{GrayScale, Repeat, SIChar, SetPosition, C0, C1, G0, G1},
     MinitelMessage,
 };
 
@@ -39,6 +39,8 @@ pub struct MinitelBackend<S: Write> {
     last_char_kind: CharKind,
     char_attributes: Vec<C1>,
     zone_attributes: Vec<C1>,
+    repeat: u8,
+    last_cell: Option<Cell>,
 }
 
 impl<S: Write> MinitelBackend<S> {
@@ -47,8 +49,11 @@ impl<S: Write> MinitelBackend<S> {
             stream,
             cursor_position: (255, 255),
             last_char_kind: CharKind::None,
+
             char_attributes: Vec::new(),
             zone_attributes: Vec::new(),
+            repeat: 0,
+            last_cell: None,
         }
     }
 
@@ -64,10 +69,22 @@ impl<S: Write> Backend for MinitelBackend<S> {
     #[inline(always)]
     fn draw<'a, I>(&mut self, content: I) -> std::io::Result<()>
     where
-        I: Iterator<Item = (u16, u16, &'a ratatui::buffer::Cell)>,
+        I: Iterator<Item = (u16, u16, &'a Cell)>,
     {
         for (x, y, cell) in content {
             self.cursor_position.0 += 1;
+
+            // Check if the cell is a repeat
+            if (self.cursor_position.0, self.cursor_position.1) == (x, y)
+                && Some(cell.to_owned()) == self.last_cell
+            {
+                self.repeat += 1;
+                continue;
+            } else if self.repeat > 0 {
+                self.send(Repeat(self.repeat))?;
+                self.repeat = 0;
+            }
+            self.last_cell = Some(cell.to_owned());
 
             // Zone attributes: background color, invert, ...
             let mut zone_attributes = vec![match cell.bg {
@@ -152,7 +169,6 @@ impl<S: Write> Backend for MinitelBackend<S> {
                 || std::mem::discriminant(&self.last_char_kind)
                     != std::mem::discriminant(&char_kind)
             {
-                // Invalidated, we can start from scratch
                 self.cursor_position = (x, y);
                 self.char_attributes = Vec::new();
                 self.zone_attributes = Vec::new();
@@ -205,6 +221,10 @@ impl<S: Write> Backend for MinitelBackend<S> {
                 }
                 _ => {}
             }
+        }
+        if self.repeat > 0 {
+            self.send(Repeat(self.repeat))?;
+            self.repeat = 0;
         }
         Ok(())
     }
@@ -279,4 +299,56 @@ pub mod border {
         horizontal_top: "▔",
         horizontal_bottom: "▁",
     };
+}
+
+pub mod widgets {
+    use ratatui::{prelude::*, style::Styled};
+
+    pub struct Fill {
+        pub char: char,
+        pub style: Style,
+    }
+
+    impl Default for Fill {
+        fn default() -> Self {
+            Self {
+                char: '█',
+                style: Style::default(),
+            }
+        }
+    }
+
+    impl Fill {
+        pub fn with_char(self, char: char) -> Self {
+            Self { char, ..self }
+        }
+    }
+
+    impl Styled for Fill {
+        type Item = Self;
+
+        fn style(&self) -> Style {
+            self.style
+        }
+
+        fn set_style<S: Into<Style>>(self, style: S) -> Self::Item {
+            Self {
+                style: style.into(),
+                ..self
+            }
+        }
+    }
+
+    impl Widget for Fill {
+        fn render(self, area: Rect, buf: &mut Buffer) {
+            buf.set_style(area, self.style);
+            for y in area.top()..area.bottom() {
+                for x in area.left()..area.right() {
+                    if let Some(cell) = buf.cell_mut((x, y)) {
+                        cell.set_symbol(&self.char.to_string());
+                    }
+                }
+            }
+        }
+    }
 }
