@@ -4,7 +4,7 @@ use std::io;
 
 use minitel::{
     prelude::*,
-    ratatui::MinitelBackend,
+    ratatui::{widgets::Fill, MinitelBackend},
     stum::videotex::{FunctionKey, StringMessage, UserInput, C0},
 };
 use ratatui::{
@@ -35,7 +35,7 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            selected_tab: SelectedTab::Bienvenue,
+            selected_tab: SelectedTab::default(),
             date: Date::from_calendar_date(2025, Month::January, 15).unwrap(),
             demo_disjoint: false,
             exit: false,
@@ -132,9 +132,9 @@ impl App {
 
 #[derive(Default, Clone, Copy, Debug, Display, FromRepr, EnumIter)]
 enum SelectedTab {
-    #[default]
     #[strum(to_string = "Bienvenue")]
     Bienvenue,
+    #[default]
     #[strum(to_string = "Cal")]
     Calendrier,
     #[strum(to_string = "Monde")]
@@ -191,8 +191,8 @@ impl App {
             .divider(" ")
             .render(tabs_area, buf);
 
-        Block::default()
-            .bg(self.selected_tab.color())
+        Fill::default()
+            .fg(self.selected_tab.color())
             .render(main_area, buf);
     }
 
@@ -202,8 +202,8 @@ impl App {
             .pixel_size(PixelSize::Sextant)
             .style(Style::default().set_style((Color::Blue, self.selected_tab.color())))
             .lines(vec![
-                "Bienvenue".slow_blink().into(),
-                "dans le".into(),
+                "Ratatui".slow_blink().into(),
+                "dans ton".into(),
                 "Minitel !".underlined().crossed_out().into(),
             ])
             .centered()
@@ -212,17 +212,18 @@ impl App {
     }
 
     fn draw_calendar(&self, buf: &mut Buffer, main_area: Rect) {
-        let calendar_area = center(main_area, Constraint::Length(24), Constraint::Length(9));
+        let calendar_area = center(main_area, Constraint::Length(23), Constraint::Max(9));
+        Fill::default().fg(Color::Black).render(calendar_area, buf);
         let calendar_block = Block::bordered()
             .border_set(QUADRANT_OUTSIDE_TOP_FULL)
             .title(calendrier_title(self.date))
             .title_alignment(Alignment::Center)
             .style((Color::Blue, Color::White));
         let [weekdays_area, days_area] =
-            Layout::vertical([Constraint::Length(1), Constraint::Fill(1)])
+            Layout::vertical([Constraint::Length(1), Constraint::Max(1)])
                 .areas(calendar_block.inner(calendar_area));
         calendar_block.render(calendar_area, buf);
-        Paragraph::new(" Di Lun Mar Mer Je Ve Sa ".fg(Color::Magenta).underlined())
+        Paragraph::new(" Di Lu Ma Me Je Ve Sa ".fg(Color::Magenta).underlined())
             .render(weekdays_area, buf);
         Monthly::new(self.date, CalendarEventStore::default())
             .show_surrounding(Style::default().fg(Color::Cyan))

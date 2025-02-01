@@ -341,9 +341,12 @@ pub mod widgets {
 
     impl Widget for Fill {
         fn render(self, area: Rect, buf: &mut Buffer) {
+            buf.set_style(area, self.style);
             for y in area.top()..area.bottom() {
                 for x in area.left()..area.right() {
-                    buf.set_string(x, y, self.char.to_string(), self.style);
+                    if let Some(cell) = buf.cell_mut((x, y)) {
+                        cell.set_symbol(&self.char.to_string());
+                    }
                 }
             }
         }
