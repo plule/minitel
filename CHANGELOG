@@ -15,8 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Render repeated characters with REP
+- Added catch-all enum from value, remove cases of failures when reading user input
 
 ### Removed
+
+- Enum protocol merged in C1
 
 ## [0.2.0] - 2025-01-18
 
