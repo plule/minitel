@@ -258,7 +258,7 @@ impl<S: Write> Backend for MinitelBackend<S> {
     }
 
     fn size(&self) -> std::io::Result<ratatui::prelude::Size> {
-        Ok(Size::new(40, 24))
+        Ok(Size::new(40, 25))
     }
 
     fn window_size(&mut self) -> std::io::Result<ratatui::backend::WindowSize> {

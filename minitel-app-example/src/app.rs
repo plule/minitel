@@ -132,9 +132,9 @@ impl App {
 
 #[derive(Default, Clone, Copy, Debug, Display, FromRepr, EnumIter)]
 enum SelectedTab {
+    #[default]
     #[strum(to_string = "Bienvenue")]
     Bienvenue,
-    #[default]
     #[strum(to_string = "Cal")]
     Calendrier,
     #[strum(to_string = "Monde")]
@@ -191,8 +191,8 @@ impl App {
             .divider(" ")
             .render(tabs_area, buf);
 
-        Fill::default()
-            .fg(self.selected_tab.color())
+        Block::default()
+            .bg(self.selected_tab.color())
             .render(main_area, buf);
     }
 
@@ -213,19 +213,20 @@ impl App {
 
     fn draw_calendar(&self, buf: &mut Buffer, main_area: Rect) {
         let calendar_area = center(main_area, Constraint::Length(23), Constraint::Max(9));
-        Fill::default().fg(Color::Black).render(calendar_area, buf);
         let calendar_block = Block::bordered()
             .border_set(QUADRANT_OUTSIDE_TOP_FULL)
             .title(calendrier_title(self.date))
             .title_alignment(Alignment::Center)
             .style((Color::Blue, Color::White));
         let [weekdays_area, days_area] =
-            Layout::vertical([Constraint::Length(1), Constraint::Max(1)])
+            Layout::vertical([Constraint::Length(1), Constraint::Fill(1)])
                 .areas(calendar_block.inner(calendar_area));
         calendar_block.render(calendar_area, buf);
+        Fill::default().fg(Color::White).render(days_area, buf); // calendar does not draw a background
         Paragraph::new(" Di Lu Ma Me Je Ve Sa ".fg(Color::Magenta).underlined())
             .render(weekdays_area, buf);
         Monthly::new(self.date, CalendarEventStore::default())
+            .default_style((Color::Blue, Color::White))
             .show_surrounding(Style::default().fg(Color::Cyan))
             .render(days_area, buf);
     }

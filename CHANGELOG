@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Render repeated characters with REP
 - Added catch-all enum from value, remove cases of failures when reading user input
+- Fix ratatui virtual terminal height
 
 ### Removed
 
