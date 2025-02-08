@@ -40,8 +40,8 @@ use std::io::{Error, ErrorKind, Result};
 
 use stum::{
     protocol::{
-        Baudrate, FunctionMode, Pro1, Pro2, Pro2Resp, Pro3Resp, Protocol, ProtocolMessage, Rom,
-        RoutingRx, RoutingTx,
+        Baudrate, FunctionMode, Pro1, Pro2, Pro2Resp, Pro3Resp, ProtocolMessage, Rom, RoutingRx,
+        RoutingTx,
     },
     videotex::{FunctionKey, UserInput, C0, C1, G0, G2},
 };
@@ -69,12 +69,11 @@ pub trait AsyncMinitelRead {
         if let Ok(g0) = G0::try_from(b) {
             return Ok(UserInput::Char(g0.into()));
         }
-        let c0 = C0::try_from(b).map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        let c0 = C0::from(b);
         match c0 {
             C0::ESC => {
                 // ESC code, C1 special char
-                let c1 = C1::try_from(self.read_byte().await?)
-                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+                let c1 = C1::from(self.read_byte().await?);
                 Ok(UserInput::C1(c1))
             }
             C0::Sep => {
@@ -126,7 +125,7 @@ pub trait AsyncMinitelRead {
     #[inline(always)]
     async fn read_pro2(&mut self, expected_ack: Pro2Resp) -> Result<u8> {
         self.wait_for(C0::ESC).await?;
-        self.expect_read(Protocol::Pro2).await?;
+        self.expect_read(C1::Pro2).await?;
         self.expect_read(expected_ack).await?;
         self.read_byte().await
     }
@@ -134,7 +133,7 @@ pub trait AsyncMinitelRead {
     #[inline(always)]
     async fn read_pro3(&mut self, expected_ack: Pro3Resp) -> Result<(u8, u8)> {
         self.wait_for(C0::ESC).await?;
-        self.expect_read(Protocol::Pro3).await?;
+        self.expect_read(C1::Pro3).await?;
         self.expect_read(expected_ack).await?;
         Ok((self.read_byte().await?, self.read_byte().await?))
     }
@@ -237,8 +236,8 @@ pub trait AsyncMinitelReadWriteBaudrate:
     fn get_speed_blocking(&mut self) -> Result<Baudrate> {
         // blocking read, can't make async timeout work on esp
         for _ in 0..10 {
-            if let Ok(Ok(C0::ESC)) = self.read_byte_blocking().map(C0::try_from) {
-                if let Ok(Ok(Protocol::Pro2)) = self.read_byte_blocking().map(Protocol::try_from) {
+            if let Ok(C0::ESC) = self.read_byte_blocking().map(C0::from) {
+                if let Ok(C1::Pro2) = self.read_byte_blocking().map(C1::from) {
                     if let Ok(Ok(Pro2Resp::QuerySpeedAnswer)) =
                         self.read_byte_blocking().map(Pro2Resp::try_from)
                     {

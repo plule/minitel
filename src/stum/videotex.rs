@@ -1,8 +1,10 @@
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
 use smallvec::SmallVec;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::MinitelMessage;
+
+use super::protocol::ProtocolMessage;
 
 /// Virtual keystroke sequence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,6 +17,8 @@ pub enum UserInput {
     C1(C1),
     /// One of the function keys
     FunctionKey(FunctionKey),
+    /// Protocol command
+    Protocol(ProtocolMessage),
 }
 
 pub struct StringMessage(pub String);
@@ -39,7 +43,7 @@ impl MinitelMessage for SetPosition {
 /// Base control characters
 /// <https://jbellue.github.io/stum1b/#2-2-1-2-4-2>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum C0 {
     NUL = 0x00,
     SOH = 0x01,
@@ -83,6 +87,9 @@ pub enum C0 {
     RS = 0x1E,
     /// Sub article separator
     US = 0x1F,
+    /// Unkown control character
+    #[num_enum(catch_all)]
+    Other(u8),
 }
 
 impl MinitelMessage for C0 {
@@ -94,8 +101,20 @@ impl MinitelMessage for C0 {
 /// ESC control character
 /// <https://jbellue.github.io/stum1b/#2-2-1-2-4-2>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum C1 {
+    /// Protocol message with one parameter
+    /// Not listed as C1, but used like one after ESC
+    /// <https://jbellue.github.io/stum1b/#2-6-2>
+    Pro1 = 0x39,
+    /// Protocol message with two parameters
+    /// Not listed as C1, but used like one after ESC
+    /// <https://jbellue.github.io/stum1b/#2-6-2>
+    Pro2 = 0x3A,
+    /// Protocol message with three parameters
+    /// Not listed as C1, but used like one after ESC
+    /// <https://jbellue.github.io/stum1b/#2-6-2>
+    Pro3 = 0x3B,
     /// 0%
     CharBlack = 0x40,
     /// 50%
@@ -146,6 +165,10 @@ pub enum C1 {
 
     /// Enquiry cursor position
     EnqCursor = 0x61,
+
+    /// Unkown control character
+    #[num_enum(catch_all)]
+    Other(u8),
 }
 
 impl MinitelMessage for C1 {

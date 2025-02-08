@@ -5,48 +5,43 @@
 use core::fmt;
 use std::fmt::{Display, Formatter};
 
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use num_enum::{FromPrimitive, IntoPrimitive};
 
-use crate::{stum::videotex, MinitelMessage};
+use crate::{
+    stum::videotex::{self, C1},
+    MinitelMessage,
+};
 
 /// Emission code of the Minitel modules
 ///
 /// <https://jbellue.github.io/stum1b/#2-6-1>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum RoutingTx {
     Screen = 0x50,
     Keyboard = 0x51,
     Modem = 0x52,
     Prise = 0x53,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
 /// Reception code of the Minitel modules
 ///
 /// <https://jbellue.github.io/stum1b/#2-6-1>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum RoutingRx {
     Screen = 0x58,
     Keyboard = 0x59,
     Modem = 0x5A,
     Prise = 0x5B,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
-/// Escape sequence starting a protocol message
-///
-/// <https://jbellue.github.io/stum1b/#2-6-2>
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
-pub enum Protocol {
-    /// Message with one parameter
-    Pro1 = 0x39,
-    /// Message with two parameters
-    Pro2 = 0x3A,
-    /// Message with three parameters
-    Pro3 = 0x3B,
-}
-
+/// Protocol messages
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProtocolMessage {
     Pro1(Pro1),
     Pro2(Pro2, u8),
@@ -57,18 +52,14 @@ impl MinitelMessage for ProtocolMessage {
     fn message(self) -> Vec<u8> {
         match self {
             ProtocolMessage::Pro1(x) => {
-                vec![videotex::C0::ESC.into(), Protocol::Pro1.into(), x.into()]
+                vec![videotex::C0::ESC.into(), C1::Pro1.into(), x.into()]
             }
             ProtocolMessage::Pro2(x, y) => {
-                vec![videotex::C0::ESC.into(), Protocol::Pro2.into(), x.into(), y]
+                vec![videotex::C0::ESC.into(), C1::Pro2.into(), x.into(), y]
             }
-            ProtocolMessage::Pro3(x, y, z) => vec![
-                videotex::C0::ESC.into(),
-                Protocol::Pro3.into(),
-                x.into(),
-                y,
-                z,
-            ],
+            ProtocolMessage::Pro3(x, y, z) => {
+                vec![videotex::C0::ESC.into(), C1::Pro3.into(), x.into(), y, z]
+            }
         }
     }
 }
@@ -95,96 +86,78 @@ impl ProtocolMessage {
     }
 }
 
-impl Protocol {
-    /// Sequence for a protocol message with one parameter
-    pub fn pro1(x: Pro1) -> [u8; 3] {
-        [videotex::C0::ESC.into(), Self::Pro1.into(), x.into()]
-    }
-
-    /// Sequence for a protocol message with two parameters
-    pub fn pro2(x: Pro2, y: impl Into<u8>) -> [u8; 4] {
-        [
-            videotex::C0::ESC.into(),
-            Self::Pro2.into(),
-            x.into(),
-            y.into(),
-        ]
-    }
-
-    /// Sequence for a protocol message with three parameters
-    pub fn pro3(x: Pro3, y: impl Into<u8>, z: impl Into<u8>) -> [u8; 5] {
-        [
-            videotex::C0::ESC.into(),
-            Self::Pro3.into(),
-            x.into(),
-            y.into(),
-            z.into(),
-        ]
-    }
-
-    /// Sequence for a protocol message to enable or disable a routing
-    ///
-    /// <https://jbellue.github.io/stum1b/#2-6-3>
-    pub fn aiguillage(enable: bool, from: RoutingTx, to: RoutingRx) -> [u8; 5] {
-        Self::pro3(
-            if enable {
-                Pro3::RoutingOn
-            } else {
-                Pro3::RoutingOff
-            },
-            to,
-            from,
-        )
-    }
+/// Sequence for a protocol message to enable or disable a routing
+///
+/// <https://jbellue.github.io/stum1b/#2-6-3>
+pub fn aiguillage(enable: bool, from: RoutingTx, to: RoutingRx) -> ProtocolMessage {
+    ProtocolMessage::Pro3(
+        if enable {
+            Pro3::RoutingOn
+        } else {
+            Pro3::RoutingOff
+        },
+        to.into(),
+        from.into(),
+    )
 }
 
 /// Protocol messages with one parameter
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum Pro1 {
     EnqSpeed = 0x74,
     /// <https://jbellue.github.io/stum1b/#2-6-6>
     EnqRom = 0x7B,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
 /// Protocol messages with two parameters
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum Pro2 {
     RoutingTo = 0x62,
     Start = 0x69,
     Stop = 0x6A,
     Prog = 0x6B,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
 /// Protocol messages with three parameters
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum Pro3 {
-    RoutingOn = 0x61,
     RoutingOff = 0x60,
+    RoutingOn = 0x61,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
 /// Protocol responses with two parameter
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum Pro2Resp {
     RepStatus = 0x73,
     QuerySpeedAnswer = 0x75,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
 /// Protocol responses with three parameter
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum Pro3Resp {
     RoutingFrom = 0x63,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
 /// Function mode for scrolling, error correcting, and lowercase
 ///
 /// <https://jbellue.github.io/stum1b/#2-6-11>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum FunctionMode {
     /// Mode Rouleau (screen scrolling)
     Rouleau = 0x43,
@@ -192,6 +165,8 @@ pub enum FunctionMode {
     Procedure = 0x44,
     /// Minuscule (lowercase)
     Minuscule = 0x45,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
 #[derive(Debug, Clone, Copy)]
