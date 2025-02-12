@@ -3,6 +3,7 @@ use std::io::Write;
 use backend::WindowSize;
 
 use ratatui::prelude::*;
+use ratatui::style::Styled;
 use ratatui::{backend::Backend, buffer::Cell};
 
 use crate::{
@@ -141,6 +142,8 @@ impl<S: Write> Backend for MinitelBackend<S> {
                 || cell.modifier.contains(Modifier::SLOW_BLINK)
             {
                 char_attributes.push(C1::Blink);
+            } else {
+                char_attributes.push(C1::Fixed);
             }
 
             // Chose between a char or a semi graphic
@@ -299,6 +302,22 @@ pub mod border {
         horizontal_top: "▔",
         horizontal_bottom: "▁",
     };
+}
+
+pub trait StyledMinitelExt {
+    type Item;
+    fn invalidation_group(self, group: u8) -> Self::Item;
+}
+
+impl<T> StyledMinitelExt for T
+where
+    T: Styled<Item = T>,
+{
+    type Item = Self;
+    fn invalidation_group(self, group: u8) -> Self::Item {
+        let style = self.style().underline_color(Color::Indexed(group));
+        self.set_style(style)
+    }
 }
 
 pub mod widgets {

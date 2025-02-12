@@ -1,4 +1,4 @@
-use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
+use num_enum::{FromPrimitive, IntoPrimitive};
 use smallvec::SmallVec;
 use unicode_normalization::UnicodeNormalization;
 
@@ -350,7 +350,7 @@ impl G1 {
 
 /// <https://jbellue.github.io/stum1b/#2-2-1-2-8>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum G2 {
     Pound = 0x23,
     Dollar = 0x24,
@@ -374,6 +374,8 @@ pub enum G2 {
     OeMaj = 0x6A,
     OeMin = 0x7A,
     Beta = 0x7B,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
 impl MinitelMessage for G2 {
@@ -407,6 +409,7 @@ impl G2 {
             G2::OeMaj => 'Œ',
             G2::OeMin => 'œ',
             G2::Beta => 'β',
+            G2::Unknown(_) => ' ',
         }
     }
 
@@ -517,7 +520,7 @@ impl TryFrom<char> for SIChar {
 ///
 /// <https://jbellue.github.io/stum1b/#2-3-6>
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, FromPrimitive)]
 pub enum FunctionKey {
     Envoi = 0x41,
     Retour = 0x42,
@@ -528,6 +531,8 @@ pub enum FunctionKey {
     Correction = 0x47,
     Suite = 0x48,
     ConnexionFin = 0x49,
+    #[num_enum(catch_all)]
+    Unknown(u8),
 }
 
 impl MinitelMessage for FunctionKey {

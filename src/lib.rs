@@ -78,14 +78,12 @@ pub trait AsyncMinitelRead {
             }
             C0::Sep => {
                 // SEP code, function key
-                let fct = FunctionKey::try_from(self.read_byte().await?)
-                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+                let fct = FunctionKey::from(self.read_byte().await?);
                 Ok(UserInput::FunctionKey(fct))
             }
             C0::SS2 => {
                 // SS2 code, G2 char, returned as unicode char
-                let g2 = G2::try_from(self.read_byte().await?)
-                    .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+                let g2 = G2::from(self.read_byte().await?);
 
                 if let Some(diacritics) = g2.unicode_diacritic() {
                     // With diacritics, read one more byte for the base char
