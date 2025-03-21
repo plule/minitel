@@ -283,12 +283,12 @@ impl G1 {
     /// [5, 6]]
     pub fn from_bits(bits: [[bool; 2]; 3]) -> Self {
         let val: u8 = (bits[0][0] as u8)
-            | (bits[0][1] as u8) << 1
-            | (bits[1][0] as u8) << 2
-            | (bits[1][1] as u8) << 3
-            | (bits[2][0] as u8) << 4
-            | (true as u8) << 5
-            | (bits[2][1] as u8) << 6;
+            | ((bits[0][1] as u8) << 1)
+            | ((bits[1][0] as u8) << 2)
+            | ((bits[1][1] as u8) << 3)
+            | ((bits[2][0] as u8) << 4)
+            | ((true as u8) << 5)
+            | ((bits[2][1] as u8) << 6);
         G1(val)
     }
 
