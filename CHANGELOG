@@ -11,8 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Put the invalidation group hack behind a feature flag
-
 ### Removed
 
 ## [0.3.0] - 2025-02-08
@@ -27,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Render repeated characters with REP
 - Added catch-all enum from value, remove cases of failures when reading user input
 - Fix ratatui virtual terminal height
+- Invalidation group hack behind a feature flag
 
 ### Removed
 
