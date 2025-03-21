@@ -306,6 +306,7 @@ pub mod border {
 
 pub trait StyledMinitelExt {
     type Item;
+    #[cfg(feature = "invalidation-group")]
     fn invalidation_group(self, group: u8) -> Self::Item;
 }
 
@@ -314,6 +315,7 @@ where
     T: Styled<Item = T>,
 {
     type Item = Self;
+    #[cfg(feature = "invalidation-group")]
     fn invalidation_group(self, group: u8) -> Self::Item {
         let style = self.style().underline_color(Color::Indexed(group));
         self.set_style(style)
