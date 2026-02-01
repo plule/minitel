@@ -15,8 +15,6 @@ pub fn main() {
     // Bind the log crate to the ESP Logging facilities
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    esp_idf_svc::io::vfs::initialize_eventfd(1).expect("Failed to initialize eventfd");
-
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
