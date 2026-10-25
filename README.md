@@ -44,7 +44,7 @@ Creates a simple TCP listener.
 
 Creates a web server serving a minitel websocket on `/ws`.
 
-`cargo run -p minitel-app-example --features axum -- 0.0.0.0:3000`.
+`cargo run -p minitel-app-example --features axum -- --bind 0.0.0.0:3000`.
 
 ### ESP32
 
